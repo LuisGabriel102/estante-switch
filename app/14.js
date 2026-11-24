@@ -14,6 +14,13 @@
   // romance é o que mais importa: "Só com romance" começa ligado
   var KR = KEY + "-R-soRom", soRom = true;
   try { soRom = localStorage.getItem(KR) !== "0"; } catch (e) {}
+  // RPG retrô: pixel, 8/16 bits, masmorra, livro-jogo, clássico de antigamente (pelo nome, descrição e nota da lista)
+  var RETRO = /retr[oô]|8[- ]?bits?\b|16[- ]?bits?\b|32[- ]?bits?\b|pixel|old[- ]?school|cl[aá]ssic|dungeon ?crawl|masmorra|game ?boy|\bsnes\b|\bnes\b|mega drive|anos (80|90)|gamebook|livro[- ]jogo|fighting fantasy|roguelike|à moda antiga|nostalg/i;
+  var retroCache = {};
+  function retro(g) {
+    if (!(g.id in retroCache)) retroCache[g.id] = RETRO.test(g.n + " " + ((FICHA[g.id] && FICHA[g.id].d) || "") + " " + (g.t || ""));
+    return retroCache[g.id];
+  }
   var ROM = {sim: {p: 2.2, t: "💕 romance central"}, opc: {p: 1.9, t: "💕 dá pra namorar"}, leve: {p: 0.5, t: "romance de fundo"}};
   var TEXTO = {rpg: 1, tatica: 1, vn: 1, investigacao: 1, historia: 1, estrategia: 0.5};
 
@@ -78,6 +85,21 @@
       if (ex.fora.has(g.id) || g.s === "veto" || g.s === "espera") return;
       var semPT = !(g.s === "pt" || g.s === "pronta");
       if (qual === "traduzir" && !semPT) return;   // "Pra jogar" aceita tudo: o que não tem PT-BR você traduz
+      if (qual === "retro") {
+        // RPG e tática com cara de antigamente; aqui romance não é obrigatório, só ajuda
+        if ((g.gn !== "rpg" && g.gn !== "tatica") || !retro(g)) return;
+        var ntR = nota(g);
+        if (ntR && ntR < 72) return;
+        if (!ntR && g.l === 5) return;
+        var sR = (ntR ? ntR / 40 : 1.6) + (g.l < 5 ? 0.3 : 0) + (g.s === "pt" ? 0.3 : g.s === "pronta" ? 0.2 : 0), porR = ["👾 estilo retrô"], srR = serieDe(g, p);
+        if (ROM[g.rom]) { sR += ROM[g.rom].p * 0.5; porR.push(ROM[g.rom].t); }
+        if (srR) { sR += 0.8; porR.push("da mesma série de " + srR); }
+        if (ntR) porR.push("nota " + ntR);
+        if (horas(g)) porR.push("~" + Math.round(horas(g)) + " h de jogo");
+        porR.push(g.s === "pt" ? "PT-BR oficial" : g.s === "pronta" ? "tradução de fã pronta" : "só em inglês: você traduz");
+        out.push({g: g, s: sR, por: porR});
+        return;
+      }
       if (soRom && g.rom !== "sim" && g.rom !== "opc") return;  // romance de verdade: central ou dá pra namorar
       var share = (p.gen[g.gn] || 0) / p.tot, nt = nota(g), h = horas(g);
       if (!share && !ROM[g.rom]) return;
@@ -135,10 +157,13 @@
       '<div class="s-filtros" role="group" aria-label="Recomendações">' +
       '<button type="button" class="btn" data-r-aba="jogar" aria-pressed="' + (aba === "jogar") + '">🎮 Pra jogar</button>' +
       '<button type="button" class="btn" data-r-aba="traduzir" aria-pressed="' + (aba === "traduzir") + '">✎ Pra traduzir</button>' +
-      '<button type="button" class="btn" data-r-rom aria-pressed="' + soRom + '">💕 Só com romance</button></div>' +
+      '<button type="button" class="btn" data-r-aba="retro" aria-pressed="' + (aba === "retro") + '">👾 Retrô</button>' +
+      (aba === "retro" ? "" : '<button type="button" class="btn" data-r-rom aria-pressed="' + soRom + '">💕 Só com romance</button>') + "</div>" +
       "<p>" + (aba === "jogar"
         ? "Jogos parecidos com os que você deu estrela ou marcou, e que você ainda não abriu. Romance conta mais que tudo. Os sem PT-BR vêm marcados: esses você traduz."
-        : "Jogos só em inglês pra você traduzir: romance e as suas estrelas primeiro, depois os que têm muito texto e cabem em poucas semanas de tradução.") +
+        : aba === "traduzir"
+        ? "Jogos só em inglês pra você traduzir: romance e as suas estrelas primeiro, depois os que têm muito texto e cabem em poucas semanas de tradução."
+        : "RPGs e táticas com cara de antigamente (pixel, 8 e 16 bits, masmorra, livro-jogo) que você ainda não abriu. Com romance, sobem na lista.") +
       " Vêm das suas listas e dos " + inst + " de " + totG + " gêneros do catálogo baixados" + (inst < totG ? ": baixe mais gêneros (📦) pra ter mais opções." : ".") +
       (r.vistos ? " " + r.vistos + (r.vistos === 1 ? " jogo que você já abriu ficou de fora." : " jogos que você já abriu ficaram de fora.") : "") + "</p>" +
       (html || '<p class="s-vazio">Nada por aqui agora. Baixe mais gêneros ou dê estrelas em mais jogos.</p>') +
