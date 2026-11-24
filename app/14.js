@@ -15,7 +15,7 @@
   var KR = KEY + "-R-soRom", soRom = true;
   try { soRom = localStorage.getItem(KR) !== "0"; } catch (e) {}
   // RPG retrô: pixel, 8/16 bits, masmorra, livro-jogo, clássico de antigamente (pelo nome, descrição e nota da lista)
-  var RETRO = /retr[oô]|8[- ]?bits?\b|16[- ]?bits?\b|32[- ]?bits?\b|pixel|old[- ]?school|cl[aá]ssic|dungeon ?crawl|masmorra|game ?boy|\bsnes\b|\bnes\b|mega drive|anos (80|90)|gamebook|livro[- ]jogo|fighting fantasy|roguelike|à moda antiga|nostalg/i;
+  var RETRO = /retr[oô]|8[- ]?bits?\b|16[- ]?bits?\b|32[- ]?bits?\b|pixel|old[- ]?school|dungeon ?crawl|masmorra|game ?boy|\bsnes\b|\bnes\b|mega drive|anos (80|90)|gamebook|livro[- ]jogo|fighting fantasy|à moda antiga|estilo antigo|jrpg cl[aá]ssico/i;
   var retroCache = {};
   function retro(g) {
     if (!(g.id in retroCache)) retroCache[g.id] = RETRO.test(g.n + " " + ((FICHA[g.id] && FICHA[g.id].d) || "") + " " + (g.t || ""));
