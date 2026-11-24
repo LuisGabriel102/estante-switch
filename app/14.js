@@ -11,6 +11,10 @@
   var porId = {};
   DATA.forEach(function (g) { porId[g.id] = g; });
   var aba = "jogar";
+  // romance é o que mais importa: "Só com romance" começa ligado
+  var KR = KEY + "-R-soRom", soRom = true;
+  try { soRom = localStorage.getItem(KR) !== "0"; } catch (e) {}
+  var ROM = {sim: {p: 2.2, t: "💕 romance central"}, opc: {p: 1.9, t: "💕 dá pra namorar"}, leve: {p: 0.5, t: "romance de fundo"}};
   var TEXTO = {rpg: 1, tatica: 1, vn: 1, investigacao: 1, historia: 1, estrategia: 0.5};
 
   function nota(g) { return (EXTRA[g.id] && EXTRA[g.id].nt) || 0; }
@@ -72,14 +76,17 @@
     var p = perfil(), ex = excluidos(qual), out = [];
     DATA.forEach(function (g) {
       if (ex.fora.has(g.id) || g.s === "veto" || g.s === "espera") return;
-      var paraJogar = g.s === "pt" || g.s === "pronta";
-      if ((qual === "jogar") !== paraJogar) return;
+      var semPT = !(g.s === "pt" || g.s === "pronta");
+      if (qual === "traduzir" && !semPT) return;   // "Pra jogar" aceita tudo: o que não tem PT-BR você traduz
+      if (soRom && g.rom !== "sim" && g.rom !== "opc") return;  // romance de verdade: central ou dá pra namorar
       var share = (p.gen[g.gn] || 0) / p.tot, nt = nota(g), h = horas(g);
-      if (!share) return;
-      if (qual === "jogar" && nt && nt < 75) return;
+      if (!share && !ROM[g.rom]) return;
+      if (qual === "jogar" && nt && nt < 72) return;
       if (qual === "jogar" && !nt && g.l === 5) return;  // do catálogo e sem nota: pouco confiável
       // pra jogar, pesa mais o gênero que você curte; pra traduzir, pesa mais a nota e o quanto o jogo é de texto
-      var s = qual === "jogar" ? share * 3 + (nt ? nt / 50 : 1.3) : share * 1.5 + (nt ? nt / 40 : 1.6), por = [], sr = serieDe(g, p);
+      var s = qual === "jogar" ? share * 2 + (nt ? nt / 50 : 1.3) : share * 1.5 + (nt ? nt / 40 : 1.6), por = [], sr = serieDe(g, p);
+      // romance: o que você mais quer
+      if (ROM[g.rom]) { s += ROM[g.rom].p; por.push(ROM[g.rom].t); } else if (g.rom === "nao") s -= 1.5;
       if (sr) { s += 0.8; por.push("da mesma série de " + sr); }
       if (g.l < 5) s += qual === "traduzir" ? 0.7 : 0.3;  // escolhido a dedo pra sua lista
       if (qual === "traduzir") {
@@ -91,12 +98,11 @@
         if (/tradu[çc][ãa]o de f[ãa] no PC|portar/i.test(g.t || "")) { s += 0.7; por.push("tem tradução de fã no PC pra aproveitar"); }
         if (!nt && g.l === 5) s -= 0.8;
       }
-      por.push(GENRES[g.gn] ? GENRES[g.gn].label + ", como " + Math.round(share * 100) + "% das suas escolhas" : "");
+      if (qual === "jogar") s += g.s === "pt" ? 0.3 : g.s === "pronta" ? 0.2 : 0;
+      if (share) por.push(GENRES[g.gn] ? GENRES[g.gn].label + ", como " + Math.round(share * 100) + "% das suas escolhas" : "");
       if (nt) por.push("nota " + nt);
       if (h) por.push("~" + Math.round(h) + " h de jogo");
-      if (qual === "jogar") por.push(g.s === "pt" ? "PT-BR oficial" : "tradução de fã pronta");
-      else por.push("só em inglês");
-      if (g.rom === "sim") por.push("romance central");
+      por.push(g.s === "pt" ? "PT-BR oficial" : g.s === "pronta" ? "tradução de fã pronta" : qual === "jogar" ? "só em inglês: você traduz" : "só em inglês");
       out.push({g: g, s: s, por: por.filter(Boolean)});
     });
     out.sort(function (a, b) { return b.s - a.s; });
@@ -128,10 +134,11 @@
     dlg.innerHTML = '<div class="p-in"><div class="p-topo"><h2 id="r-tit">Para você</h2><button type="button" class="p-x" data-r-fechar aria-label="Fechar">✕</button></div>' +
       '<div class="s-filtros" role="group" aria-label="Recomendações">' +
       '<button type="button" class="btn" data-r-aba="jogar" aria-pressed="' + (aba === "jogar") + '">🎮 Pra jogar</button>' +
-      '<button type="button" class="btn" data-r-aba="traduzir" aria-pressed="' + (aba === "traduzir") + '">✎ Pra traduzir</button></div>' +
+      '<button type="button" class="btn" data-r-aba="traduzir" aria-pressed="' + (aba === "traduzir") + '">✎ Pra traduzir</button>' +
+      '<button type="button" class="btn" data-r-rom aria-pressed="' + soRom + '">💕 Só com romance</button></div>' +
       "<p>" + (aba === "jogar"
-        ? "Jogos em português (oficial ou de fã) parecidos com os que você deu estrela ou marcou, e que você ainda não abriu."
-        : "Jogos só em inglês, do jeito que você gosta, com prioridade pros que têm muito texto e cabem em poucas semanas de tradução.") +
+        ? "Jogos parecidos com os que você deu estrela ou marcou, e que você ainda não abriu. Romance conta mais que tudo. Os sem PT-BR vêm marcados: esses você traduz."
+        : "Jogos só em inglês pra você traduzir: romance e as suas estrelas primeiro, depois os que têm muito texto e cabem em poucas semanas de tradução.") +
       " Vêm das suas listas e dos " + inst + " de " + totG + " gêneros do catálogo baixados" + (inst < totG ? ": baixe mais gêneros (📦) pra ter mais opções." : ".") +
       (r.vistos ? " " + r.vistos + (r.vistos === 1 ? " jogo que você já abriu ficou de fora." : " jogos que você já abriu ficaram de fora.") : "") + "</p>" +
       (html || '<p class="s-vazio">Nada por aqui agora. Baixe mais gêneros ou dê estrelas em mais jogos.</p>') +
@@ -143,6 +150,11 @@
     if (!t) return;
     if (t.id === "r-abrir") { desenhar(); dlg.showModal(); return; }
     if (t.hasAttribute("data-r-fechar")) { dlg.close(); return; }
+    if (t.hasAttribute("data-r-rom")) {
+      soRom = !soRom;
+      try { localStorage.setItem(KR, soRom ? "1" : "0"); } catch (err) {}
+      desenhar(); return;
+    }
     if (t.dataset.rAba) { aba = t.dataset.rAba; desenhar(); dlg.querySelector(".p-in").scrollTop = 0; return; }
     if (t.dataset.rFicha) { dlg.close(); abrirFicha(t.dataset.rFicha); return; }
     if (t.dataset.rEstrela) {
