@@ -2,10 +2,10 @@
 // - o app fica guardado (abre na hora com o que está guardado; a versão nova chega na próxima vez)
 // - os pacotes de gênero ficam guardados só quando você baixa (e são atualizados sozinhos quando muda)
 // - capas e fotos: quem guarda é o botão "⬇ Baixar" de cada gênero; o resto fica no cache normal do navegador
-const VERSAO = "597a3d2993";
+const VERSAO = "9afc932774";
 const APP = "estante-app-" + VERSAO;
 const PACS = "estante-pacotes";
-const ARQUIVOS = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./app/01.js?v=0d8f531860", "./app/02.js?v=853e066705", "./app/03.js?v=de80d68f6a", "./app/04.js?v=f9a7a7e2ec", "./app/05.js?v=aedf219313", "./app/06.js?v=4b04817e9e", "./app/07.js?v=75381df2d3", "./app/08.js?v=2cde205886", "./app/09.js?v=56b62670f3", "./app/10.js?v=92367c036b", "./app/11.js?v=e281f1f33d", "./app/12.js?v=3ed979dffd", "./app/13.js?v=00641d42a6", "./app/14.js?v=6392c45145"];
+const ARQUIVOS = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./app/01.js?v=0d8f531860", "./app/02.js?v=853e066705", "./app/03.js?v=de80d68f6a", "./app/04.js?v=f9a7a7e2ec", "./app/05.js?v=aedf219313", "./app/06.js?v=4b04817e9e", "./app/07.js?v=75381df2d3", "./app/08.js?v=2cde205886", "./app/09.js?v=56b62670f3", "./app/10.js?v=92367c036b", "./app/11.js?v=e281f1f33d", "./app/12.js?v=3ed979dffd", "./app/13.js?v=00641d42a6", "./app/14.js?v=85b811cb97"];
 
 self.addEventListener("install", function (e) {
   e.waitUntil(caches.open(APP).then(function (c) { return c.addAll(ARQUIVOS); }).then(function () { return self.skipWaiting(); }));
