@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estante do Switch (celular)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://img-eshop.cdn.nintendo.net">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* layout: resumo do cartão + contadores por status no topo, filtros, depois grupos por status com cards em grade */
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --ink: #141c27;
+  --muted: #566173;
+  --line: #d5dbe4;
+  --accent: #3550e0;
+  --accent-ink: #ffffff;
+  --accent-soft: #e4e9fb;
+  --pt: #1d7f4f;
+  --pt-bg: #e2f3e9;
+  --pronta: #0a7480;
+  --pronta-bg: #ddf1f3;
+  --sua: #9a5a00;
+  --sua-bg: #fbeedb;
+  --espera: #5d4ab0;
+  --espera-bg: #ebe7fa;
+  --veto: #b8322a;
+  --veto-bg: #fae3e1;
+  --flame: #e0532a;
+  --warn: #b26b00;
+  --rom: #b4245f;
+  --star: #9a6700;
+  --star-bg: #fff3d1;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1219;
+    --surface: #161d27;
+    --ink: #e6ebf2;
+    --muted: #9ba6b6;
+    --line: #2a3442;
+    --accent: #8197ff;
+    --accent-ink: #0d1219;
+    --accent-soft: #1e2648;
+    --pt: #52cc8e;
+    --pt-bg: #11301f;
+    --pronta: #4bc9d3;
+    --pronta-bg: #0e2c31;
+    --sua: #f2aa3f;
+    --sua-bg: #34250c;
+    --espera: #ab9cf6;
+    --espera-bg: #241d44;
+    --veto: #ff7d72;
+    --veto-bg: #3b1714;
+    --flame: #ff8a5c;
+    --warn: #f2aa3f;
+    --rom: #ff8fbf;
+    --star: #ffcc4d;
+    --star-bg: #3a2f10;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1219;
+  --surface: #161d27;
+  --ink: #e6ebf2;
+  --muted: #9ba6b6;
+  --line: #2a3442;
+  --accent: #8197ff;
+  --accent-ink: #0d1219;
+  --accent-soft: #1e2648;
+  --pt: #52cc8e;
+  --pt-bg: #11301f;
+  --pronta: #4bc9d3;
+  --pronta-bg: #0e2c31;
+  --sua: #f2aa3f;
+  --sua-bg: #34250c;
+  --espera: #ab9cf6;
+  --espera-bg: #241d44;
+  --veto: #ff7d72;
+  --veto-bg: #3b1714;
+  --flame: #ff8a5c;
+  --warn: #f2aa3f;
+  --rom: #ff8fbf;
+  --star: #ffcc4d;
+  --star-bg: #3a2f10;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 28px 20px 48px; display: grid; gap: 24px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(26px, 4vw, 36px); font-weight: 700; letter-spacing: -0.01em; }
+.sub { margin: 6px 0 0; color: var(--muted); }
+.resumo { margin: 10px 0 0; font-size: 17px; max-width: 70ch; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: grid; gap: 14px; }
+.panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.panel h2 { font-size: 21px; font-weight: 700; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.seg button { font: inherit; font-weight: 600; border: 0; background: transparent; color: var(--ink); padding: 8px 14px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.meter { height: 20px; border-radius: 10px; background: var(--accent-soft); overflow: hidden; border: 1px solid var(--line); }
+.meter .fill { height: 100%; width: 0; background: var(--pt); transition: width .25s ease; }
+.meter.warn .fill { background: var(--warn); }
+.meter.over .fill { background: var(--veto); }
+.leitura { margin: 0; font-size: 17px; font-variant-numeric: tabular-nums; }
+.leitura strong { font-weight: 600; }
+.falta { color: var(--veto); font-weight: 600; }
+.total { margin: 0; color: var(--muted); font-variant-numeric: tabular-nums; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { font: inherit; font-weight: 500; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 9px; padding: 7px 12px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.fine { margin: 0; font-size: 13px; color: var(--muted); }
+.aviso { margin: 0; padding: 10px 14px; border-left: 4px solid var(--warn); background: var(--sua-bg); border-radius: 0 10px 10px 0; }
+.aviso strong { font-weight: 600; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.tile { display: grid; gap: 2px; text-align: left; font: inherit; color: var(--ink); background: var(--cbg); border: 2px solid transparent; border-radius: 12px; padding: 12px 14px; cursor: pointer; }
+.tile .num { font-family: var(--font-display); font-size: 30px; font-weight: 700; color: var(--c); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile .lbl { font-weight: 600; }
+.tile .dsc { font-size: 13px; color: var(--muted); }
+.tile[aria-pressed="true"] { border-color: var(--c); }
+.s-pt { --c: var(--pt); --cbg: var(--pt-bg); }
+.s-pronta { --c: var(--pronta); --cbg: var(--pronta-bg); }
+.s-sua { --c: var(--sua); --cbg: var(--sua-bg); }
+.s-espera { --c: var(--espera); --cbg: var(--espera-bg); }
+.dica, .q-dica, .panel:not(.pl-painel) .mais-info { display: none !important; }
+.s-cat { --c: var(--muted); --cbg: var(--surface); }
+.selo.nota { background: #1f6f43; color: #fff; }
+.selo.nota.baixa { background: #b3261e; color: #fff; }
+.mais-jogos { display: block; margin: 14px auto 4px; }
+.ficha-dados span.baixa { background: #b3261e; color: #fff; }
+.selo.nc { background: #5f6368; color: #fff; }
+.s-veto { --c: var(--veto); --cbg: var(--veto-bg); }
+.filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.filters input[type="search"], .filters select { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; }
+.filters input[type="search"] { flex: 1 1 220px; min-width: 0; }
+.check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.groups { display: grid; gap: 28px; }
+.group { display: grid; gap: 12px; }
+.group-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.group-head h2 { font-size: 22px; }
+.group-head .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c); align-self: center; }
+.group-head .count { color: var(--muted); font-variant-numeric: tabular-nums; }
+.group-head p { margin: 0; color: var(--muted); flex-basis: 100%; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.card.is-sel { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.card-top { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--cbg); color: var(--c); }
+.tag { font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.tag.so { border-color: var(--veto); color: var(--veto); }
+.tag.nc { border-style: dashed; }
+.tag.quer { border-color: var(--accent); color: var(--accent); }
+.tag.sw { border-color: var(--warn); color: var(--warn); font-weight: 600; }
+.tag.mt { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.mini-mt { font-size: 11px; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 0 6px; white-space: nowrap; }
+#lista-jogos, .vit-row, .vit-wrap { min-width: 0; max-width: 100%; }
+.vit-trilho { width: 100%; }
+.pular-trilho { flex-wrap: nowrap !important; overflow-x: auto !important; }
+.vit-seta { opacity: 0; transition: opacity .15s; }
+.vit-wrap:hover .vit-seta, .vit-seta:focus-visible { opacity: 1; }
+.vit-row { margin: 6px 0 22px; }
+.vit-head { display: flex; align-items: baseline; gap: 10px; margin: 0 0 8px; }
+.vit-head h2 { margin: 0; font-family: var(--font-display); font-size: 21px; }
+.vit-head .count { color: var(--muted); font-size: 14px; }
+.vit-wrap { position: relative; }
+.vit-trilho { display: grid; grid-auto-flow: column; grid-auto-columns: 172px; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 2px 12px; scrollbar-width: thin; }
+.vit-item { position: relative; scroll-snap-align: start; }
+.vit-item .fav-capa { top: 8px; left: 8px; }
+.pl-rapido { position: absolute; top: 8px; right: 8px; z-index: 5; width: 32px; height: 32px; font-size: 16px; display: grid; place-items: center; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.barra-txt .limpar { min-height: 28px; padding: 1px 10px; font-size: 13px; margin-left: 4px; }
+.vit-card { scroll-snap-align: start; display: grid; gap: 6px; align-content: start; border: 0; background: none; padding: 0; text-align: left; cursor: pointer; font: inherit; color: var(--ink); }
+.vit-card .cover { width: 172px; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.18); transition: transform .15s; }
+.vit-card:hover .cover, .vit-card:focus-visible .cover { transform: scale(1.04); }
+.vit-card .capa-nome { font-size: 14px; }
+.vit-seta { position: absolute; top: 70px; z-index: 2; width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 22px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+.vit-seta.esq { left: -8px; } .vit-seta.dir { right: -8px; }
+@media (max-width: 560px) { .vit-trilho { grid-auto-columns: 148px; } .vit-card .cover { width: 148px; } .vit-seta { display: none; } }
+.selos { position: absolute; left: 6px; right: 6px; bottom: 6px; z-index: 1; display: flex; flex-wrap: wrap; gap: 4px; pointer-events: none; }
+.selo { font-size: 11px; font-weight: 700; line-height: 1.5; padding: 0 6px; border-radius: 999px; background: rgba(10,14,20,.78); color: #fff; white-space: nowrap; }
+.selo.pt { background: #1d7f4f; } .selo.dub { background: #0a6e9a; } .selo.fa { background: #0a7480; } .selo.rom { background: #b4245f; } .selo.mt { background: #3550e0; }
+.cover .previa { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 2; animation: previa-in .25s; }
+@keyframes previa-in { from { opacity: 0; } to { opacity: 1; } }
+.cover .previa-barra { position: absolute; left: 0; bottom: 0; height: 3px; z-index: 3; background: var(--accent); transition: width .2s; }
+.ficha-trailer { position: relative; display: block; border-radius: 12px; overflow: hidden; aspect-ratio: 16 / 9; background: #000; }
+.ficha-trailer img { width: 100%; height: 100%; object-fit: cover; opacity: .9; }
+.ficha-trailer .play { position: absolute; inset: 0; display: grid; place-items: center; }
+.ficha-trailer .play span { width: 76px; height: 54px; border-radius: 14px; background: #e02020; color: #fff; display: grid; place-items: center; font-size: 28px; box-shadow: 0 4px 16px rgba(0,0,0,.4); }
+.ficha-trailer .rot { position: absolute; left: 10px; bottom: 10px; font-size: 13px; font-weight: 600; color: #fff; background: rgba(0,0,0,.6); padding: 2px 10px; border-radius: 999px; }
+.ficha-dados { display: flex; flex-wrap: wrap; gap: 8px; }
+.ficha-dados span { font-size: 14px; padding: 4px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--ink); }
+.quadro { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: start; }
+@media (max-width: 899px) { .quadro { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .quadro { grid-template-columns: 1fr; } }
+.q-col { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px; display: grid; gap: 8px; min-height: 140px; }
+.q-col.alvo { border-color: var(--accent); background: var(--accent-soft); }
+.q-col h3 { margin: 0; font-size: 15px; display: flex; justify-content: space-between; }
+.q-card { display: grid; grid-template-columns: 56px 1fr; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 6px; background: var(--bg); cursor: grab; }
+.q-card .cover { width: 56px; }
+.q-card .nome { font-size: 13px; font-weight: 600; line-height: 1.25; }
+.q-card .onde { font-size: 12px; color: var(--muted); }
+.q-card .q-acoes { grid-column: 1 / -1; display: flex; gap: 4px; flex-wrap: wrap; }
+.q-card .q-acoes button { font: inherit; font-size: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 2px 8px; cursor: pointer; }
+.q-dica { margin: 0 0 10px; font-size: 14px; color: var(--muted); }
+.ficha-topo .selos, .card-head .selos, .q-card .selos { display: none; }
+.planos { display: flex; flex-wrap: wrap; gap: 8px; }
+.pl-btn { font: inherit; font-weight: 600; cursor: pointer; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); padding: 7px 14px; min-height: 40px; }
+.pl-btn:hover { border-color: var(--accent); color: var(--accent); }
+.pl-btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.mini-pl { font-size: 11px; font-weight: 700; color: var(--pt); background: var(--pt-bg); border-radius: 999px; padding: 0 6px; white-space: nowrap; }
+.pl-painel .pl-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pl-chip { font: inherit; font-weight: 600; cursor: pointer; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 7px 14px; min-height: 40px; }
+.pl-chip .n { color: var(--muted); font-weight: 500; margin-left: 4px; }
+.pl-chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.pl-chip[aria-pressed="true"] .n { color: var(--accent-ink); }
+.pl-nova { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pl-nova input { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; min-width: 0; flex: 1 1 200px; max-width: 320px; }
+.pl-ativa { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 14px; color: var(--muted); }
+.pl-ativa strong { color: var(--ink); }
+.pl-vazio { margin: 0; font-size: 14px; color: var(--muted); }
+.ficha-pls { display: grid; gap: 8px; }
+.ficha-pls h3 { margin: 0; font-family: var(--font-body); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.ficha-pls .lst { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.pl-pos { font-size: 11px; font-weight: 700; color: var(--accent-ink); background: var(--accent); border-radius: 999px; padding: 0 6px; }
+.ficha-mt { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }
+.ficha-mt select { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.card h3 { font-size: 17px; font-weight: 600; line-height: 1.25; }
+.note { margin: 0; font-size: 14px; color: var(--muted); }
+.foot { display: flex; align-items: center; gap: 10px; margin-top: auto; border-top: 1px dashed var(--line); padding-top: 8px; }
+.size { font-weight: 600; font-variant-numeric: tabular-nums; }
+.hype { display: inline-flex; gap: 1px; color: var(--flame); }
+.inst { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
+.out { margin-left: auto; font-size: 13px; color: var(--muted); }
+input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); margin: 0; }
+.cover { position: relative; flex: none; display: grid; place-items: center; overflow: hidden; aspect-ratio: 1; background: var(--accent-soft); color: var(--accent); border-radius: 10px; }
+.cover svg { width: 44%; height: 44%; }
+.cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.card-head { display: flex; gap: 12px; align-items: center; }
+.card-head .cover { width: 60px; }
+.card-title { display: grid; gap: 2px; min-width: 0; }
+.gen { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.loja { font-size: 14px; font-weight: 500; align-self: flex-start; }
+.links { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.grid-capas { display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 10px; }
+.capa-tile { position: relative; display: grid; gap: 5px; align-content: start; background: var(--surface); color: var(--ink); border: 2px solid var(--line); border-radius: 12px; padding: 6px; cursor: pointer; }
+.capa-tile .cover { width: 100%; border-radius: 8px; }
+.capa-tile.is-sel { border-color: var(--accent); background: var(--accent-soft); }
+.capa-tile:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
+.capa-check { position: absolute; top: 11px; right: 11px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; font-weight: 700; background: var(--surface); border: 2px solid var(--line); color: transparent; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.capa-tile.is-sel .capa-check { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.capa-nome { font-size: 13px; font-weight: 600; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.capa-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 13px; color: var(--muted); }
+.mini-sw { font-size: 11px; font-weight: 700; color: var(--warn); border: 1px solid var(--warn); border-radius: 999px; padding: 0 6px; white-space: nowrap; }
+.capa-meta .size { color: var(--ink); }
+.capa-meta .hype svg { width: 14px; height: 14px; }
+.capa-tile.is-off { cursor: default; }
+.capa-tile.is-off .cover { opacity: .55; }
+.capa-off { position: absolute; left: 6px; right: 6px; top: 6px; padding: 3px 6px; font-size: 12px; font-weight: 600; text-align: center; border-radius: 8px 8px 0 0; background: var(--cbg); color: var(--c); }
+.dica { margin: 0; font-size: 14px; }
+.aviso-capas { margin: 0; padding: 12px 14px; border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 10px 10px 0; }
+.aviso-capas[hidden], .barra-aviso[hidden] { display: none; }
+.barra-aviso { margin: 4px auto 0; max-width: 1080px; font-size: 13px; color: var(--accent); font-weight: 600; }
+body { padding-bottom: 64px; }
+.barra { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -4px 14px rgba(0,0,0,.10); padding: 0 16px calc(10px + env(safe-area-inset-bottom)); }
+.barra-meter { height: 5px; margin: 0 -16px 8px; background: var(--accent-soft); }
+.barra-fill { height: 100%; width: 0; background: var(--pt); transition: width .25s ease; }
+.barra.warn .barra-fill { background: var(--warn); }
+.barra.over .barra-fill { background: var(--veto); }
+.barra-txt { margin: 0 auto; max-width: 1080px; font-size: 15px; font-variant-numeric: tabular-nums; }
+@media (max-width: 699px) { .barra { padding-bottom: calc(8px + env(safe-area-inset-bottom)); } .barra-meter { margin-bottom: 6px; } .barra-txt { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } body { padding-bottom: 52px; } }
+.empty { margin: 0; padding: 24px; text-align: center; color: var(--muted); background: var(--surface); border: 1px dashed var(--line); border-radius: 12px; }
+footer { color: var(--muted); font-size: 13px; display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 18px; }
+footer h2 { font-size: 16px; color: var(--ink); }
+footer ul { margin: 0; padding-left: 18px; columns: 2 280px; column-gap: 28px; }
+footer li { break-inside: avoid; margin-bottom: 4px; }
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 420px) {
+  .wrap { padding: 20px 16px 40px; }
+  .grid { grid-template-columns: 1fr; }
+  .seg button { padding: 8px 10px; }
+}
+@media (min-width: 700px) {
+  .grid-capas { grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .meter .fill, .barra-fill { transition: none; }
+}
+/* botão "Ver o jogo" e ficha do jogo */
+.capa-tile, .grid > .card { content-visibility: auto; contain-intrinsic-size: auto 300px; }
+.capa-tile { cursor: default; align-content: stretch; grid-template-rows: 1fr auto; }
+.capa-tile:focus-within { outline: none; }
+.capa-tile:has(.sr:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
+.capa-hit { display: grid; gap: 5px; align-content: start; cursor: pointer; }
+.capa-tile.is-off .capa-hit { cursor: default; }
+.ver { font: inherit; font-size: 13px; font-weight: 600; min-height: 34px; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--accent); cursor: pointer; }
+.ver:hover { border-color: var(--accent); }
+.capa-tile .ver { width: 100%; }
+.links { align-items: center; }
+html:has(dialog[open]) { overflow: hidden; }
+@media (max-width: 560px) { html:has(dialog[open]) { overflow: visible; } }
+#ficha { padding: 0; border: 0; border-radius: 16px; width: min(760px, calc(100vw - 24px)); max-width: none; max-height: calc(100dvh - 24px); background: var(--surface); color: var(--ink); box-shadow: 0 20px 60px rgba(0,0,0,.35); overflow: auto; overscroll-behavior: contain; }
+#ficha::backdrop { background: rgba(8, 12, 18, .62); }
+.ficha-in { padding: 18px 20px 20px; display: grid; gap: 14px; }
+.ficha-topo { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.ficha-topo .cover { width: 72px; }
+.ficha-titulo { display: grid; gap: 4px; min-width: 0; }
+.ficha-titulo h2 { font-size: 22px; line-height: 1.2; }
+.ficha-x { font: inherit; font-size: 18px; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; align-self: start; }
+.ficha-x:hover { border-color: var(--accent); }
+.ficha-galeria { display: grid; gap: 8px; }
+.ficha-galeria[hidden], .ficha-sem[hidden] { display: none; }
+.ficha-palco { position: relative; border-radius: 12px; overflow: hidden; background: #000; aspect-ratio: 16 / 9; }
+.ficha-foto { width: 100%; height: 100%; object-fit: contain; display: block; }
+.ficha-seta { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(0,0,0,.55); color: #fff; font-size: 28px; line-height: 1; cursor: pointer; }
+.ficha-seta:hover { background: rgba(0,0,0,.75); }
+.ficha-seta.ant { left: 8px; }
+.ficha-seta.prox { right: 8px; }
+.ficha-conta { position: absolute; right: 10px; bottom: 8px; padding: 2px 8px; border-radius: 999px; background: rgba(0,0,0,.6); color: #fff; font-size: 12px; font-variant-numeric: tabular-nums; }
+.ficha-mini { display: flex; gap: 8px; overflow-x: auto; padding: 2px; }
+.mini { flex: none; width: 92px; aspect-ratio: 16 / 9; padding: 0; border: 2px solid transparent; border-radius: 8px; overflow: hidden; background: var(--accent-soft); cursor: pointer; opacity: .7; }
+.mini img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mini.on { border-color: var(--accent); opacity: 1; }
+.ficha-sem { margin: 0; padding: 12px 14px; border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 10px 10px 0; }
+.ficha-texto { display: grid; gap: 4px; }
+.ficha-texto h3 { font-family: var(--font-body); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.ficha-texto p { margin: 0 0 10px; font-size: 16px; max-width: 65ch; }
+.ficha-texto p:last-child { margin-bottom: 0; }
+.ficha-pe { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; border-top: 1px dashed var(--line); padding-top: 12px; }
+.ficha-pe .inst { font-size: 15px; }
+@media (max-width: 560px) {
+  #ficha { width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; margin: 0; }
+  .ficha-in { padding: 14px 16px 24px; }
+  .ficha-topo { grid-template-columns: 56px minmax(0, 1fr) auto; }
+  .ficha-topo .cover { width: 56px; }
+  .ficha-titulo h2 { font-size: 19px; }
+}
+/* duas marcações, romance e arrumação por gênero */
+.fav { font: inherit; line-height: 1; cursor: pointer; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); }
+.fav:hover { border-color: var(--star); color: var(--star); }
+.fav[aria-pressed="true"] { color: var(--star); border-color: var(--star); background: var(--star-bg); }
+.fav-capa { position: absolute; top: 11px; left: 11px; z-index: 5; width: 32px; height: 32px; font-size: 18px; display: grid; place-items: center; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.capa-tile.is-off .fav-capa { top: 36px; }
+.fav-card { flex: none; margin-left: auto; width: 40px; height: 40px; font-size: 20px; }
+.fav-ficha { min-height: 40px; padding: 6px 14px; font-weight: 600; }
+.mini-rom { font-size: 11px; font-weight: 700; color: var(--rom); border: 1px solid var(--rom); border-radius: 999px; padding: 0 6px; white-space: nowrap; }
+.mini-rom.r-leve { border-style: dashed; font-weight: 600; }
+.mini-st { font-size: 11px; font-weight: 700; color: var(--c); background: var(--cbg); border-radius: 999px; padding: 0 6px; white-space: nowrap; }
+.tag.rom { border-color: var(--rom); color: var(--rom); font-weight: 600; }
+.tag.rom.r-leve { border-style: dashed; }
+.tag.rom.r-nao { border-color: var(--line); color: var(--muted); font-weight: 400; }
+.tag.rom.r-nc { border-color: var(--line); color: var(--muted); font-weight: 400; border-style: dashed; }
+.fav-count { color: var(--star); font-weight: 600; }
+.gen-ico { display: inline-grid; place-items: center; width: 24px; height: 24px; color: var(--accent); align-self: center; }
+.gen-ico svg { width: 24px; height: 24px; }
+/* 23/11: menu fixo de grupos, filtros recolhíveis, tamanho, novos */
+.filtros-btn { display: none; }
+.filtros-n { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 6px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 12px; font-weight: 700; }
+.filtros-n:empty { display: none; }
+.filtros-mais { flex-basis: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: center; }
+.filtros-mais select { width: 100%; min-width: 0; }
+.filtros-checks { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.filters select.ativo { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.mostrando { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0; min-height: 32px; font-size: 14px; color: var(--muted); }
+.mostrando strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+.limpar { font: inherit; font-size: 14px; font-weight: 600; min-height: 32px; padding: 3px 14px; border: 1px solid var(--accent); border-radius: 999px; background: var(--surface); color: var(--accent); cursor: pointer; }
+.limpar:hover { background: var(--accent-soft); }
+.empty .limpar { margin-top: 12px; }
+.area-jogos { min-width: 0; }
+.pular { position: sticky; top: 0; z-index: 4; margin: 0 -20px; padding: 8px 20px; background: var(--bg); background: color-mix(in srgb, var(--bg) 94%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+.pular[hidden], .check[hidden] { display: none; }
+.pular-trilho { position: relative; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+.pular-trilho::-webkit-scrollbar { display: none; }
+.pular-chip { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 4px 12px; font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); cursor: pointer; }
+.pular-chip:hover { border-color: var(--accent); }
+.pular-chip svg { width: 16px; height: 16px; color: var(--accent); }
+.pular-chip .n { font-weight: 500; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pular-chip .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+.pular-chip[aria-current="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.pular-chip[aria-current="true"] svg, .pular-chip[aria-current="true"] .n { color: var(--accent-ink); }
+.pular + .groups { margin-top: 18px; }
+.group { scroll-margin-top: calc(var(--pular-h, 54px) + 14px); }
+@media (min-width: 700px) {
+  .pular-trilho { flex-wrap: wrap; overflow: visible; }
+}
+.cover .capa-novo { position: absolute; left: 6px; bottom: 6px; z-index: 1; padding: 1px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 700; letter-spacing: .02em; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+.tag.novo { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.mais-info summary { cursor: pointer; width: fit-content; font-size: 14px; font-weight: 600; color: var(--accent); }
+.mais-info[open] summary { margin-bottom: 6px; }
+@media (max-width: 899px) {
+  .filtros-mais { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 699px) {
+  .filtros-btn { display: inline-flex; align-items: center; min-height: 40px; }
+  .filters input[type="search"] { min-height: 40px; }
+  .filtros-mais { display: none; grid-template-columns: 1fr; }
+  .filters.aberto .filtros-mais { display: grid; }
+  .filtros-mais select { min-height: 42px; }
+  .filtros-checks { flex-direction: column; gap: 10px; }
+}
+@media (max-width: 560px) {
+  .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .tile { padding: 10px; }
+  .tile .num { font-size: 24px; }
+  .tile .lbl { font-size: 13px; line-height: 1.25; }
+  .tile .dsc { display: none; }
+  body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 420px) {
+  .pular { margin: 0 -16px; padding: 8px 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pular-trilho { scroll-behavior: auto; }
+}
+</style>
+<script>try{var a=JSON.parse(localStorage.getItem("estante-switch-v1-C-ajustes")||"null");if(a){var h=document.documentElement;if(a.tema==="claro")h.dataset.theme="light";else if(a.tema==="escuro")h.dataset.theme="dark";a.cols=Number(a.cols);if(a.cols===3&&!a.capasV)a.cols=2;if(a.cols>=1&&a.cols<=4)h.dataset.cols=a.cols;if(a.compacto)h.dataset.compacto="1";if(a.letra&&a.letra!=100){h.dataset.letra="1";h.style.setProperty("--c-z",a.letra/100)}}}catch(e){}</script>
+<style>
+/* mod_A2_desfazer.css */
+.a2-desfazer { position: fixed; left: 8px; right: 64px; bottom: calc(var(--a2-barra-h, 70px) + 8px + var(--a2-extra, 0px)); z-index: 6; display: flex; align-items: center; gap: 8px; max-width: 360px; padding: 6px 10px; background: var(--ink); color: var(--bg); border-radius: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.25); font-size: 14px; }
+.a2-desfazer[hidden] { display: none; }
+.a2-desfazer span { flex: 1; }
+.a2-desfazer button { font: inherit; font-weight: 700; min-height: 34px; padding: 2px 14px; border: 0; border-radius: 999px; background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+.a2-topo { position: fixed; right: 12px; bottom: calc(var(--a2-barra-h, 70px) + 12px + var(--a2-extra, 0px)); z-index: 6; width: 46px; height: 46px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-ink); font-size: 24px; line-height: 1; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,.3); }
+.a2-topo[hidden] { display: none; }
+
+/* mod_A_navegar.css */
+/* Grupo A: copia no Drive, lembrete, busca fixa, rolagem sem fim */
+.a-drive-linha { margin: 12px 0 4px; }
+.a-drive-btn { display: block; width: 100%; min-height: 52px; font: inherit; font-size: 17px; font-weight: 700; border: 0; border-radius: 12px; background: var(--accent); color: var(--accent-ink); cursor: pointer; padding: 10px 16px; }
+.a-drive-btn:active { filter: brightness(.9); }
+.a-drive-info { margin: 6px 2px 0; font-size: 13px; color: var(--muted); }
+
+.a-lembrete { position: fixed; left: 8px; right: 8px; bottom: calc(var(--a-barra-h, 70px) + 8px); z-index: 6; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; max-width: 520px; margin: 0 auto; padding: 8px 10px; background: var(--surface); color: var(--ink); border: 1px solid var(--accent); border-radius: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.18); font-size: 14px; }
+.a-lembrete[hidden] { display: none; }
+.a-lembrete span { flex: 1 1 140px; }
+.a-lembrete button { font: inherit; font-size: 14px; font-weight: 600; min-height: 36px; padding: 4px 14px; border-radius: 999px; border: 1px solid var(--accent); background: var(--surface); color: var(--accent); cursor: pointer; }
+.a-lembrete button.a-sim { background: var(--accent); color: var(--accent-ink); }
+
+#a-busca-fixa { display: none; }
+@media (max-width: 699px) {
+  #a-busca-fixa.on { display: block; position: fixed; top: 0; left: 0; right: 0; z-index: 6; height: 44px; box-sizing: border-box; padding: 5px 12px; background: var(--bg); border-bottom: 1px solid var(--line); }
+  #a-busca-fixa input { width: 100%; height: 34px; box-sizing: border-box; font: inherit; font-size: 16px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); }
+  .pular { top: var(--a-busca-h, 0px); }
+  .group { scroll-margin-top: calc(var(--pular-h, 54px) + var(--a-busca-h, 0px) + 14px); }
+}
+
+/* mod_B2_ficha.css */
+.nav-b2 { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: -6px 0 -4px; }
+.nav-b2 button { font: inherit; font-size: 20px; line-height: 1; width: 44px; height: 32px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.nav-b2 button[disabled] { opacity: .35; cursor: default; }
+.nav-b2 span { font-size: 12px; color: var(--muted); }
+.ficha-in { touch-action: pan-y; }
+.ficha-in textarea, .ficha-in input { touch-action: auto; }
+.notas-b2 h3 { margin: 0 0 6px; }
+.notas-b2 textarea { width: 100%; box-sizing: border-box; min-height: 72px; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; resize: vertical; }
+.nota-ico-b2 { position: absolute; top: 4px; right: 4px; z-index: 4; font-size: 13px; line-height: 1; background: rgba(0,0,0,.55); border-radius: 6px; padding: 2px 3px; }
+
+/* mod_B_decidir.css */
+/* grupo B: chips, ordem, parecidos, deslizar */
+#filtros { min-width: 0; }
+.chips-b { flex-basis: 100%; min-width: 0; max-width: 100%; display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 4px; scrollbar-width: none; }
+.chips-b::-webkit-scrollbar { display: none; }
+.chip-b { flex: 0 0 auto; font: inherit; font-size: 14px; font-weight: 600; min-height: 38px; padding: 4px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; white-space: nowrap; }
+.chip-b[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.ordem-dica-b { grid-column: 1 / -1; margin: 0; font-size: 13px; color: var(--muted); }
+.ordem-dica-b[hidden] { display: none; }
+.ficha-palco, .ficha-foto { touch-action: pan-y; -webkit-user-drag: none; user-select: none; }
+.parecidos-b h3 { margin: 0 0 8px; }
+.parecidos-b .lista { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+.par-b { flex: 0 0 104px; display: grid; gap: 4px; align-content: start; text-align: left; font: inherit; font-size: 13px; color: var(--ink); background: none; border: 0; padding: 0; cursor: pointer; }
+.par-b .cover { display: block; border-radius: 8px; overflow: hidden; }
+.par-b .selos { display: none; }
+.par-b span.nm { line-height: 1.2; }
+
+/* mod_C2_visual.css */
+/* Rodada 2: correções visuais (grupo C) */
+.wrap, .wrap > *, .area-jogos, .groups, .pular { min-width: 0; }
+.wrap > *, .area-jogos, .groups { max-width: 100%; }
+.area-jogos { display: block; }
+@media (max-width: 699px) {
+  html[data-cols="4"] .fav-capa { width: 26px; height: 26px; font-size: 14px; top: 6px; left: 6px; }
+  html[data-cols="4"] .capa-check { width: 20px; height: 20px; font-size: 12px; top: 8px; right: 6px; }
+  html[data-cols="4"] .selos { left: 3px; right: 3px; bottom: 3px; gap: 2px; }
+  html[data-cols="4"] .selo { font-size: 9px; padding: 0 4px; }
+  html[data-cols="4"] .capa-tile .ver { font-size: 10px; padding: 2px 2px; min-height: 30px; }
+  html[data-cols="4"] .capa-meta { overflow: hidden; }
+  html[data-cols="4"] .capa-meta > *, html[data-cols="4"] .mini-st { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  html[data-cols="4"] .selos .selo:nth-child(n+3) { display: none; }
+}
+
+/* mod_C_ajustes.css */
+/* Ajustes: botão, painel, colunas, compacto, letra */
+.c-topo { display: flex; gap: 8px; margin: 12px 0 0; }
+.c-btn { font: inherit; font-weight: 600; min-height: 44px; padding: 8px 16px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.c-fundo { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.5); display: none; align-items: flex-end; justify-content: center; }
+.c-fundo.aberto { display: flex; }
+.c-folha { width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto; background: var(--surface); color: var(--ink); border-radius: 16px 16px 0 0; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); display: grid; gap: 14px; }
+.c-folha h2 { font-size: 20px; }
+.c-folha h3 { font-size: 15px; margin-bottom: 6px; }
+.c-folha .seg { display: flex; }
+.c-folha .seg button { flex: 1; min-height: 44px; }
+.c-folha label.c-chk { display: flex; gap: 10px; align-items: center; min-height: 44px; font-weight: 600; }
+.c-folha label.c-chk input { width: 22px; height: 22px; }
+.c-folha p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+html[data-letra] .wrap, html[data-letra] .barra { zoom: var(--c-z); }
+@media (max-width: 699px) {
+  html[data-cols="2"] .grid-capas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html[data-cols="4"] .grid-capas { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  html[data-cols="4"] .capa-nome { font-size: 11px; }
+  html[data-cols="4"] .selo, html[data-cols="4"] .capa-meta { font-size: 10px; }
+  html[data-cols="2"] .capa-tile { contain-intrinsic-size: auto 290px; }
+  html[data-cols="4"] .capa-tile { contain-intrinsic-size: auto 220px; }
+}
+html[data-compacto] .capa-meta, html[data-compacto] .selos, html[data-compacto] .capa-tile .ver, html[data-compacto] .capa-novo { display: none; }
+html[data-compacto] .capa-tile .capa-nome { text-decoration: underline dotted; text-underline-offset: 3px; }
+html[data-compacto] .capa-tile { contain-intrinsic-size: auto 200px; }
+
+/* mod_D_descobrir.css */
+/* item 12: modo Descobrir (um jogo por vez; direita = estrela, esquerda = pular) */
+.desc-abrir { white-space: nowrap; }
+.desc-tela { position: fixed; inset: 0; z-index: 50; background: var(--bg, #eef1f6); display: flex; flex-direction: column; padding: 10px 12px calc(12px + env(safe-area-inset-bottom)); }
+.desc-tela[hidden] { display: none; }
+.desc-topo { display: flex; align-items: center; gap: 8px; }
+.desc-topo h2 { margin: 0; font-size: 18px; flex: 1; }
+.desc-conta { color: var(--muted); font-size: 13px; }
+.desc-x { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 20px; }
+.desc-palco { flex: 1; position: relative; margin: 10px 0; min-height: 0; }
+.desc-card { position: absolute; inset: 0; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,.18); overflow: auto; touch-action: pan-y; transition: transform .25s ease, opacity .25s ease; }
+.desc-card.arrastando { transition: none; }
+.desc-capa { display: block; width: 100%; aspect-ratio: 1 / 1; max-height: 42vh; object-fit: cover; border-radius: 18px 18px 0 0; background: var(--accent-soft); }
+.desc-foto { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; margin-top: 8px; }
+.desc-info { padding: 12px 14px 16px; display: grid; gap: 8px; }
+.desc-info h3 { margin: 0; font-size: 21px; line-height: 1.2; }
+.desc-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.desc-tags span { font-size: 13px; padding: 3px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--ink); }
+.desc-info p { margin: 0; font-size: 15px; line-height: 1.45; color: var(--ink); }
+.desc-selo { position: absolute; top: 18px; padding: 6px 14px; border-radius: 10px; font-weight: 800; font-size: 22px; border: 3px solid; opacity: 0; pointer-events: none; background: var(--surface); }
+.desc-selo.sim { left: 18px; color: #b8860b; border-color: #b8860b; }
+.desc-selo.nao { right: 18px; color: #c0392b; border-color: #c0392b; }
+.desc-botoes { display: flex; justify-content: center; align-items: center; gap: 14px; }
+.desc-botoes button { border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); min-height: 48px; padding: 0 16px; font-size: 15px; font-weight: 600; }
+.desc-botoes .desc-nao, .desc-botoes .desc-sim { width: 64px; height: 64px; padding: 0; font-size: 28px; }
+.desc-botoes .desc-nao { color: #c0392b; }
+.desc-botoes .desc-sim { color: #b8860b; }
+.desc-fim { text-align: center; padding: 40px 16px; color: var(--muted); }
+html.desc-aberto { overflow: hidden; }
+@media (prefers-reduced-motion: reduce) { .desc-card { transition: none; } }
+
+/* mod_E_capa_limpa.css */
+/* capa limpa no celular: as etiquetas (PT-BR, nota, horas, ♥) saem de cima da imagem e vão para baixo dela;
+   estrela e círculo de marcar ficam menores e discretos quando desligados */
+@media (max-width: 699px) {
+  .capa-tile .cover { aspect-ratio: auto; overflow: visible; display: block; background: none; border-radius: 0; }
+  .capa-tile .cover svg { position: absolute; top: 0; left: 0; width: 100%; height: auto; aspect-ratio: 1; padding: 28%; box-sizing: border-box; background: var(--accent-soft); border-radius: 8px; }
+  .capa-tile .cover img { position: relative; z-index: 1; display: block; width: 100%; height: auto; aspect-ratio: 1; border-radius: 8px; }
+  .capa-tile .selos { position: static; display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
+  .capa-tile .selo { font-size: 11px; line-height: 1.6; }
+  .capa-tile .capa-novo { bottom: auto; top: 42px; left: 8px; z-index: 2; }
+  .capa-tile .fav-capa { width: 28px; height: 28px; font-size: 16px; top: 8px; left: 8px; }
+  .capa-tile .fav-capa[aria-pressed="false"] { opacity: .55; background: rgba(255,255,255,.75); box-shadow: none; }
+  .capa-tile .capa-check { z-index: 3; width: 24px; height: 24px; font-size: 14px; top: 10px; right: 10px; }
+  .capa-tile:not(.is-sel) .capa-check { opacity: .55; background: rgba(255,255,255,.6); box-shadow: none; }
+  html[data-cols="4"] .capa-tile .selos { left: auto; right: auto; bottom: auto; }
+}
+
+/* mod_F_capas.css */
+/* 24/11: capas grandes e limpas no celular.
+   Capas: 2 por linha por padrão (de 1 a 4 em Ajustes), capa de ponta a ponta no cartão, etiquetas embaixo da imagem.
+   Vitrine: capas maiores e sem etiqueta em cima da imagem. Lista, Parecidos e Traduções: capas maiores.
+   Ficha: capa grande no topo; tocar nela, ou numa foto, abre o visor em tela cheia. */
+
+/* ficha: nada estica além da tela (a fileira "Parecidos" deixava a ficha com 674 px no celular e cortava o lado direito) */
+.ficha-in { position: relative; grid-template-columns: minmax(0, 1fr); }
+
+/* ficha: capa grande no topo, sobre um fundo desfocado da própria capa */
+.f-heroi { position: relative; isolation: isolate; overflow: hidden; display: grid; place-items: center; padding: 22px 16px; border-radius: 14px; background: #1b2230; }
+.f-heroi.com-nav { padding-bottom: 40px; }
+.f-heroi-fundo { position: absolute; top: -20%; left: -20%; width: 140%; height: 140%; object-fit: cover; filter: blur(26px) saturate(1.3) brightness(.78); z-index: -1; pointer-events: none; }
+.f-heroi-capa { position: relative; display: block; width: min(75%, 260px); aspect-ratio: 1; padding: 0; border: 0; border-radius: 14px; overflow: hidden; background: rgba(255,255,255,.08); box-shadow: 0 12px 32px rgba(0,0,0,.45); cursor: zoom-in; }
+.f-heroi-capa img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.f-heroi-lupa { position: absolute; right: 8px; bottom: 8px; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; font-size: 18px; line-height: 1; }
+/* jogo anterior e próximo: setas dos lados da capa, e "3 de 60" embaixo dela */
+.f-heroi .nav-b2 { position: absolute; inset: 0; z-index: 2; display: block; margin: 0; padding: 0; pointer-events: none; }
+.f-heroi .nav-b2 button { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; font-size: 26px; pointer-events: auto; background: rgba(16,22,32,.55); color: #fff; border: 1px solid rgba(255,255,255,.35); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.f-heroi .nav-b2 [data-viz-b2="-1"] { left: 10px; }
+.f-heroi .nav-b2 [data-viz-b2="1"] { right: 10px; }
+.f-heroi .nav-b2 span { position: absolute; left: 50%; bottom: 9px; transform: translateX(-50%); padding: 1px 10px; border-radius: 999px; background: rgba(16,22,32,.55); color: #fff; font-size: 12px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+#ficha.com-heroi .ficha-topo { grid-template-columns: minmax(0, 1fr); }
+#ficha.com-heroi .ficha-topo > .cover { display: none; }
+#ficha.com-heroi .ficha-x { position: absolute; top: 26px; right: 28px; z-index: 3; }
+#ficha.com-heroi .ficha-x, #visor .vz-x { background: rgba(16,22,32,.6); color: #fff; border: 1px solid rgba(255,255,255,.4); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.ficha-foto { cursor: zoom-in; }
+/* vitrine: a estrela e o 🎵 ficavam por cima do menu preso no alto ao rolar */
+.vit-item { isolation: isolate; }
+
+/* visor em tela cheia: capa e fotos lado a lado */
+#visor { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: #050608; color: #fff; overflow: hidden; }
+#visor::backdrop { background: #050608; }
+/* no visor só vale deslizar pro lado e dar pinça: puxar pra baixo não recarrega a página */
+#visor { touch-action: pan-x pinch-zoom; overscroll-behavior: contain; }
+html:has(#visor[open]) { overscroll-behavior: none; }
+.vz-trilho { display: flex; width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior: contain; scrollbar-width: none; }
+.vz-trilho::-webkit-scrollbar { display: none; }
+.vz-slide { flex: 0 0 100%; width: 100%; height: 100%; margin: 0; display: grid; place-items: center; scroll-snap-align: center; scroll-snap-stop: always; }
+.vz-slide img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; -webkit-user-select: none; user-select: none; }
+.vz-topo { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 10px; padding: calc(10px + env(safe-area-inset-top)) 10px 20px 16px; background: linear-gradient(rgba(0,0,0,.7), rgba(0,0,0,0)); pointer-events: none; }
+.vz-topo > * { pointer-events: auto; }
+.vz-nome { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vz-conta { font-size: 14px; color: rgba(255,255,255,.85); font-variant-numeric: tabular-nums; }
+.vz-x { flex: none; width: 44px; height: 44px; border-radius: 50%; font: inherit; font-size: 18px; cursor: pointer; }
+.vz-seta { position: absolute; top: 50%; transform: translateY(-50%); width: 52px; height: 52px; border-radius: 50%; border: 0; background: rgba(255,255,255,.16); color: #fff; font-size: 32px; line-height: 1; cursor: pointer; }
+.vz-seta.ant { left: 14px; }
+.vz-seta.prox { right: 14px; }
+.vz-seta[disabled] { opacity: .25; cursor: default; }
+.vz-pontos { position: absolute; left: 0; right: 0; bottom: calc(18px + env(safe-area-inset-bottom)); display: flex; justify-content: center; gap: 8px; pointer-events: none; }
+.vz-pontos i { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.35); }
+.vz-pontos i.on { background: #fff; }
+@media (hover: none) { .vz-seta { display: none; } }
+
+/* ficha no celular: o ✕ fica sempre no canto, mesmo rolando */
+@media (max-width: 560px) {
+  #ficha .ficha-x, #ficha.com-heroi .ficha-x { position: fixed; top: calc(10px + env(safe-area-inset-top)); right: 10px; z-index: 6; background: rgba(16,22,32,.62); color: #fff; border: 1px solid rgba(255,255,255,.4); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); box-shadow: 0 2px 10px rgba(0,0,0,.3); }
+  #ficha .nav-b2 { padding-right: 54px; }
+  #ficha .f-heroi .nav-b2 { padding: 0; }
+  #ficha:not(.com-heroi) .ficha-topo { padding-right: 50px; }
+  .f-heroi { padding: 18px 0; }
+  .f-heroi.com-nav { padding-bottom: 38px; }
+  .f-heroi-capa { width: min(74%, 300px); }
+  .f-heroi .nav-b2 button { width: 38px; height: 38px; font-size: 24px; }
+  .f-heroi .nav-b2 [data-viz-b2="-1"] { left: 4px; }
+  .f-heroi .nav-b2 [data-viz-b2="1"] { right: 4px; }
+}
+
+@media (max-height: 500px) {
+  .f-heroi { padding-top: 12px; padding-bottom: 12px; }
+  .f-heroi.com-nav { padding-bottom: 32px; }
+  .f-heroi-capa { width: min(60%, 180px); }
+}
+
+@media (max-width: 699px) {
+  /* quantas capas por linha: 2 é o padrão; 1, 3 e 4 em Ajustes */
+  .grid-capas { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  html[data-cols="1"] .grid-capas { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  html[data-cols="3"] .grid-capas { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  html[data-cols="4"] .grid-capas { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+
+  /* cartão: a capa vai de ponta a ponta e o texto fica embaixo */
+  .capa-tile { --tp: 10px; padding: 0; gap: 0; border-radius: 14px; overflow: hidden; contain-intrinsic-size: auto 360px; }
+  /* altura de reserva dos cartões ainda não desenhados: perto da altura real, pra rolagem não pular */
+  html[data-cols="2"] .capa-tile { contain-intrinsic-size: auto 360px; }
+  html[data-cols="1"] .capa-tile { --tp: 14px; contain-intrinsic-size: auto 500px; }
+  html[data-cols="3"] .capa-tile { --tp: 7px; contain-intrinsic-size: auto 305px; }
+  html[data-cols="4"] .capa-tile { --tp: 5px; contain-intrinsic-size: auto 260px; }
+  html[data-compacto] .capa-tile { contain-intrinsic-size: auto 225px; }
+  html[data-compacto][data-cols="1"] .capa-tile { contain-intrinsic-size: auto 400px; }
+  html[data-compacto][data-cols="3"] .capa-tile { contain-intrinsic-size: auto 160px; }
+  html[data-compacto][data-cols="4"] .capa-tile { contain-intrinsic-size: auto 125px; }
+  .capa-tile .capa-hit { gap: 6px; }
+  .capa-tile .cover, .vit-card .cover { place-items: normal; }
+  /* o ícone do gênero guarda o lugar da capa; a imagem fica por cima dele */
+  .capa-tile .cover svg { position: relative; top: auto; left: auto; display: block; width: 100%; height: auto; aspect-ratio: 1; padding: 30%; box-sizing: border-box; background: var(--accent-soft); border-radius: 0; }
+  .capa-tile .cover img.capa { position: absolute; top: 0; left: 0; right: auto; bottom: auto; z-index: 1; width: 100%; height: auto; aspect-ratio: 1; border-radius: 0; }
+  .capa-tile .selos { margin: 6px var(--tp) 0; }
+  .capa-tile .capa-nome, .capa-tile .capa-meta { margin: 0 var(--tp); }
+  .capa-tile .capa-nome { font-size: 15px; line-height: 1.3; }
+  .capa-tile .capa-meta { font-size: 13px; }
+  .capa-tile .selo { font-size: 11.5px; }
+  .capa-tile .ver { width: auto; min-height: 38px; margin: 6px var(--tp) var(--tp); }
+  html[data-compacto] .capa-tile .capa-hit { padding-bottom: var(--tp); }
+  .capa-tile .capa-off { left: 0; right: 0; top: 0; border-radius: 0; z-index: 2; }
+  .capa-tile .fav-capa { width: 32px; height: 32px; font-size: 18px; top: 8px; left: 8px; }
+  .capa-tile .capa-check { width: 28px; height: 28px; font-size: 15px; top: 10px; right: 10px; }
+  .capa-tile .capa-novo { top: 46px; left: 8px; }
+  .capa-tile .nota-ico-b2 { top: 46px; right: 10px; }
+  .capa-tile.is-off .fav-capa { top: 34px; }
+  /* fotos ao segurar a capa: cobrem só a imagem, não as etiquetas */
+  .capa-tile .cover .previa, .vit-card .cover .previa { position: absolute; z-index: 2; top: 0; left: 0; right: auto; bottom: auto; width: 100%; height: auto; aspect-ratio: 1; }
+  .capa-tile .cover .previa-barra, .vit-card .cover .previa-barra { top: 0; bottom: auto; }
+
+  /* 1 por linha: capa enorme */
+  html[data-cols="1"] .capa-tile .capa-nome { font-size: 18px; }
+  html[data-cols="1"] .capa-tile .capa-meta { font-size: 14px; gap: 6px 8px; }
+  html[data-cols="1"] .capa-tile .selo { font-size: 13px; padding: 1px 8px; }
+  html[data-cols="1"] .capa-tile .ver { min-height: 44px; font-size: 15px; }
+  html[data-cols="1"] .capa-tile .fav-capa { width: 44px; height: 44px; font-size: 24px; top: 12px; left: 12px; }
+  html[data-cols="1"] .capa-tile .capa-check { width: 38px; height: 38px; font-size: 20px; top: 15px; right: 15px; }
+  html[data-cols="1"] .capa-tile .capa-novo { top: 64px; left: 12px; font-size: 13px; }
+  html[data-cols="1"] .capa-tile .nota-ico-b2 { top: 62px; right: 16px; font-size: 18px; }
+  html[data-cols="1"] .capa-tile.is-off .fav-capa { top: 36px; }
+
+  /* 3 por linha */
+  html[data-cols="3"] .capa-tile .capa-nome { font-size: 13px; }
+  html[data-cols="3"] .capa-tile .capa-meta { font-size: 12px; }
+  html[data-cols="3"] .capa-tile .selo { font-size: 10.5px; }
+  html[data-cols="3"] .capa-tile .ver { min-height: 34px; font-size: 13px; }
+  html[data-cols="3"] .capa-tile .fav-capa { width: 28px; height: 28px; font-size: 16px; top: 6px; left: 6px; }
+  html[data-cols="3"] .capa-tile .capa-check { width: 24px; height: 24px; font-size: 14px; top: 8px; right: 8px; }
+  html[data-cols="3"] .capa-tile .capa-novo { top: 38px; left: 6px; }
+  html[data-cols="3"] .capa-tile .nota-ico-b2 { top: 36px; right: 8px; }
+
+  /* 4 por linha: botões e letras continuam como estavam */
+  html[data-cols="4"] .capa-tile .capa-novo { top: 34px; left: 4px; font-size: 10px; padding: 0 5px; }
+  html[data-cols="4"] .capa-tile .nota-ico-b2 { top: 30px; right: 5px; }
+
+  /* vitrine: capas maiores, a próxima aparecendo pela metade; etiquetas embaixo da imagem */
+  .vit-trilho { grid-auto-columns: calc((100% - 14px) / 1.75); }
+  html[data-cols="1"] .vit-trilho { grid-auto-columns: calc((100% - 14px) / 1.12); }
+  html[data-cols="3"] .vit-trilho { grid-auto-columns: 148px; }
+  html[data-cols="4"] .vit-trilho { grid-auto-columns: calc((100% - 36px) / 3.25); gap: 12px; }
+  .vit-card { gap: 4px; }
+  .vit-card .cover { width: 100%; aspect-ratio: auto; display: block; overflow: visible; background: none; border-radius: 0; box-shadow: none; }
+  .vit-card:hover .cover, .vit-card:focus-visible .cover { transform: none; }
+  .vit-card .cover svg { position: relative; display: block; width: 100%; height: auto; aspect-ratio: 1; padding: 30%; box-sizing: border-box; background: var(--accent-soft); border-radius: 14px; }
+  .vit-card .cover img.capa { position: absolute; top: 0; left: 0; right: auto; bottom: auto; z-index: 1; width: 100%; height: auto; aspect-ratio: 1; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.18); }
+  .vit-card .cover .previa { border-radius: 14px; }
+  .vit-card .selos { position: static; display: flex; flex-wrap: wrap; gap: 3px; margin-top: 6px; }
+  .vit-card .selo { font-size: 11.5px; line-height: 1.6; }
+  .vit-card .capa-novo { top: 46px; bottom: auto; left: 8px; z-index: 2; }
+  .vit-card .nota-ico-b2 { top: 46px; right: 8px; }
+  .vit-card .capa-nome { font-size: 15px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .vit-item .fav-capa, .vit-item .pl-rapido { width: 30px; height: 30px; font-size: 16px; top: 8px; }
+  .vit-item .fav-capa { left: 8px; }
+  .vit-item .pl-rapido { right: 8px; }
+  .vit-item .fav-capa[aria-pressed="false"], .vit-item .pl-rapido { background: rgba(255,255,255,.8); box-shadow: none; }
+  .vit-item .fav-capa[aria-pressed="false"] { opacity: .6; }
+  html[data-cols="1"] .vit-item .fav-capa, html[data-cols="1"] .vit-item .pl-rapido { width: 40px; height: 40px; font-size: 21px; top: 12px; }
+  html[data-cols="1"] .vit-item .fav-capa { left: 12px; }
+  html[data-cols="1"] .vit-item .pl-rapido { right: 12px; }
+  html[data-cols="1"] .vit-card .capa-nome { font-size: 17px; }
+  html[data-cols="1"] .vit-card .selo { font-size: 13px; }
+  html[data-cols="4"] .vit-item .fav-capa, html[data-cols="4"] .vit-item .pl-rapido { width: 24px; height: 24px; font-size: 13px; top: 5px; }
+  html[data-cols="4"] .vit-item .fav-capa { left: 5px; }
+  html[data-cols="4"] .vit-item .pl-rapido { right: 5px; }
+  html[data-cols="4"] .vit-card .capa-nome { font-size: 12px; }
+  .vit-head { align-items: center; }
+  .vit-head h2 { font-size: 19px; min-width: 0; }
+  .vit-head .count { flex: none; white-space: nowrap; }
+
+  /* lista, parecidos e quadro de traduções: capas maiores */
+  .card-head .cover { width: 92px; border-radius: 12px; }
+  .par-b { flex-basis: 128px; }
+  .q-card { grid-template-columns: 64px minmax(0, 1fr); }
+  .q-card .cover { width: 64px; }
+}
+/* lista com letra maior: os cartões passavam 8 px da tela */
+@media (max-width: 420px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* mod_G_rapido.css */
+/* 24/11 (2): marcador dos Parecidos (ocupa zero de altura), destaque do último jogo visto, aviso de ficha pra reabrir */
+.parecidos-b-marca { height: 1px; margin-top: -15px; }
+.capa-tile.g-aqui, .card.g-aqui { outline: 3px solid var(--accent); outline-offset: -3px; }
+.g-voltar { position: fixed; left: 8px; right: 8px; top: calc(56px + env(safe-area-inset-top)); z-index: 8; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 520px; margin: 0 auto; padding: 10px 12px; background: var(--surface); color: var(--ink); border: 1px solid var(--accent); border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,.22); font-size: 15px; }
+.g-voltar span { flex: 1 1 100%; }
+.g-voltar .g-sim { margin-left: auto; }
+.g-voltar button { font: inherit; font-weight: 600; min-height: 40px; padding: 4px 14px; border-radius: 999px; border: 1px solid var(--accent); background: var(--surface); color: var(--accent); cursor: pointer; }
+.g-voltar .g-sim { background: var(--accent); color: var(--accent-ink); }
+.g-voltar .g-x { min-width: 40px; padding: 0; }
+
+/* mod_H_offline.css */
+/* 24/11 (3): baixar por gênero */
+.c-topo { flex-wrap: wrap; }
+.vit-head { flex-wrap: wrap; }
+.h-gen { display: inline-flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 6px; margin-left: auto; }
+.h-baixar, .h-del { font: inherit; font-size: 13px; font-weight: 700; line-height: 1.2; min-height: 36px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); cursor: pointer; white-space: nowrap; }
+.h-baixar.h-baixando, .h-baixar.h-fila { background: var(--accent-soft); color: var(--ink); }
+.h-baixar.h-ok { background: var(--pt-bg); color: var(--pt); border-color: var(--pt); }
+.h-baixar.h-erro { background: var(--surface); color: var(--ink); border-color: var(--warn); }
+.h-del { background: var(--surface); color: var(--veto); border-color: var(--veto); font-weight: 600; }
+.h-del.h-certeza { background: var(--veto); color: #fff; }
+.h-fundo .c-folha p { font-size: 14px; }
+.h-status { margin: 0; font-size: 15px !important; color: var(--ink) !important; }
+.h-aviso { color: var(--veto); }
+.h-gens { display: grid; }
+.h-linha { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+.h-linha[hidden] { display: none; }
+.h-rot { display: grid; font-size: 15px; }
+.h-rot small { color: var(--muted); font-size: 13px; }
+.h-apagar-tudo { color: var(--veto); }
+.h-apagar-tudo[hidden] { display: none; }
+/* atalho fixo na barra dos gêneros e "Baixar todos" */
+.pular { display: flex; align-items: flex-start; gap: 8px; }
+.pular-trilho { flex: 1 1 auto; min-width: 0; }
+.h-chip { border-color: var(--accent) !important; color: var(--accent) !important; font-weight: 700 !important; }
+.h-chip.h-chip-on { background: var(--accent-soft) !important; color: var(--ink) !important; }
+.h-acoes { display: flex; flex-wrap: wrap; gap: 8px; }
+.h-todos { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.h-parar { color: var(--veto); }
+.h-todos[hidden], .h-parar[hidden], .h-fila[hidden] { display: none; }
+.h-fila { margin: 0; }
+.h-nota { margin-top: -6px !important; color: var(--muted); font-size: 13px !important; }
+
+</style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#3048d8">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://wsrv.nl">
+<style>
+#carregando { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: var(--bg); color: var(--muted); font-size: 17px; }
+.p-pac { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.p-pac p { margin: 0; color: var(--muted); }
+#p-dlg { padding: 0; border: 0; border-radius: 16px; width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); background: var(--surface); color: var(--ink); box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+#p-dlg::backdrop { background: rgba(10,14,20,.55); }
+.p-in { padding: 18px 18px 20px; display: grid; gap: 12px; }
+.p-in h2 { font-size: 21px; }
+.p-in > p { margin: 0; color: var(--muted); }
+.p-topo { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.p-x { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 17px; cursor: pointer; }
+.p-lin { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; }
+.p-lin.tem { border-color: var(--pt); background: var(--pt-bg); }
+.p-nome { font-weight: 600; }
+.p-info { grid-column: 1; font-size: 13px; color: var(--muted); }
+.p-lin .btn { grid-row: 1 / span 2; grid-column: 2; min-width: 96px; min-height: 40px; }
+.p-lin .btn[data-p-apagar] { color: var(--veto); }
+.p-uso { font-size: 13px; color: var(--muted); }
+.p-erro { color: var(--veto); font-weight: 600; }
+</style>
+
+</head>
+<body>
+<div id="carregando" role="status">Abrindo a estante…</div>
+<main class="wrap">
+  <header>
+    <h1>Estante do Switch</h1>
+    <p class="sub" id="sub">As suas listas e as minhas sugestões, juntas. Atualizado em 23/11/2026.</p>
+    <p class="resumo" id="resumo"></p>
+    <div class="p-pac" id="p-pac"></div>
+  </header>
+
+  <section class="panel" aria-labelledby="t-cartao">
+    <div class="panel-head">
+      <h2 id="t-cartao">Cabe no cartão?</h2>
+      <div class="seg" role="group" aria-label="Tamanho do cartão de memória">
+        <button type="button" data-cap="119" aria-pressed="false">128 GB</button>
+        <button type="button" data-cap="238" aria-pressed="true">256 GB</button>
+        <button type="button" data-cap="476" aria-pressed="false">512 GB</button>
+        <button type="button" data-cap="931" aria-pressed="false">1 TB</button>
+        <button type="button" data-cap="1863" aria-pressed="false">2 TB</button>
+      </div>
+    </div>
+    <div class="meter" id="meter" role="progressbar" aria-label="Espaço ocupado pelos jogos marcados" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="fill"></div></div>
+    <p class="leitura" id="leitura"></p>
+    <p class="total" id="total"></p>
+    <div class="actions">
+      <button type="button" class="btn" id="btn-hype">Marcar os que você destacou</button>
+      <button type="button" class="btn" id="btn-all">Marcar tudo</button>
+      <button type="button" class="btn" id="btn-none">Desmarcar tudo</button>
+    </div>
+    <p class="dica"><strong>Na ficha de cada jogo</strong> ("Ver o jogo") tem mais três botões: <strong>Quero jogar</strong>, <strong>Quero traduzir</strong> e <strong>Já joguei</strong>, e a lista das suas playlists. <strong>São duas marcações na capa.</strong> A estrela ☆, no canto da capa, é "tenho interesse": não mexe no cartão. Tocar na capa é "quero instalar": entra na conta do cartão, e a barra lá embaixo mostra na hora se ainda cabe. Pra ver fotos e o resumo de um jogo, toque em "Ver o jogo", embaixo da capa.</p>
+    <p class="aviso"><strong>Atenção na eShop:</strong> alguns jogos vendem duas versões. Compre a que diz só "Nintendo Switch". A de "Nintendo Switch 2" não roda no OLED. Os jogos com esse risco têm a etiqueta laranja.</p>
+    <details class="mais-info"><summary>Mais detalhes: cartão, capas e traduções</summary>
+    <p class="fine">Seu cartão de 256 GB aparece com uns 238 GB livres no Switch; o de 2 TB, com uns 1.863 GB. O console ainda tem uns 58 GB na memória interna. Os tamanhos vêm da eShop; as atualizações somam um pouco mais. As capas vêm direto da loja da Nintendo e precisam de internet: sem ela, aparece o ícone do gênero. O que você marca fica salvo neste aparelho. As traduções de fã vêm do catálogo da PKG Traduções, conferido em 18, 19 e 23/11/2026. Elas só funcionam no Switch desbloqueado.</p>
+    </details>
+  </section>
+
+  <section aria-labelledby="t-grupos">
+    <h2 id="t-grupos" class="sr">Grupos</h2>
+    <div class="tiles">
+      <button type="button" class="tile s-pt" data-status="pt" aria-pressed="false"><span class="num">0</span><span class="lbl">PT-BR oficial</span><span class="dsc">Só jogar</span></button>
+      <button type="button" class="tile s-pronta" data-status="pronta" aria-pressed="false"><span class="num">0</span><span class="lbl">Tradução pronta</span><span class="dsc">Instalar ou portar</span></button>
+      <button type="button" class="tile s-sua" data-status="sua" aria-pressed="false"><span class="num">0</span><span class="lbl">Tradução sua</span><span class="dsc">Traduzir do zero</span></button>
+      <button type="button" class="tile s-espera" data-status="espera" aria-pressed="false"><span class="num">0</span><span class="lbl">Esperar</span><span class="dsc">Ainda não saiu</span></button>
+      <button type="button" class="tile s-veto" data-status="veto" aria-pressed="false"><span class="num">0</span><span class="lbl">Vetar</span><span class="dsc">Fica de fora</span></button>
+      <button type="button" class="tile s-cat" data-status="cat" aria-pressed="false"><span class="num">0</span><span class="lbl">Catálogo completo</span><span class="dsc">Todos os outros</span></button>
+    </div>
+  </section>
+
+  <section class="panel pl-painel" id="pl-painel" aria-labelledby="t-pls">
+    <div class="panel-head"><h2 id="t-pls">Suas playlists</h2></div>
+    <p class="dica">Junte jogos do jeito que quiser: "pra jogar primeiro", "pra traduzir", "noite do desbloqueio". Toque numa playlist pra ver só os jogos dela, na ordem em que você pôs. Pra pôr ou tirar um jogo, abra "Ver o jogo".</p>
+    <div class="pl-chips" id="pl-chips"></div>
+    <div class="pl-ativa" id="pl-ativa" hidden></div>
+    <div class="pl-nova">
+      <label class="sr" for="pl-nome">Nome da playlist nova</label>
+      <input type="text" id="pl-nome" maxlength="60" placeholder="Nome da playlist nova">
+      <button type="button" class="btn" id="pl-criar">Criar playlist</button>
+    </div>
+    <details class="mais-info"><summary>Guardar uma cópia das suas marcações</summary>
+    <p class="fine">Tudo o que você marca (estrela, instalar, planos, sua tradução e playlists) fica salvo neste navegador. Pra levar pra outro aparelho, ou não perder se limpar o navegador, baixe uma cópia e carregue no outro.</p>
+    <div class="actions"><button type="button" class="btn" id="pl-exportar">Baixar cópia</button>
+    <label class="btn" for="pl-importar">Carregar cópia</label><input type="file" id="pl-importar" accept="application/json,.json" class="sr"></div>
+    <p class="fine" id="pl-msg" aria-live="polite"></p>
+    </details>
+  </section>
+
+  <p class="aviso-capas" id="aviso-capas" hidden><strong>As capas não carregaram aqui.</strong> Isso acontece quando a página abre dentro do app do Claude, que bloqueia imagens de fora, ou quando está sem internet. Baixe o arquivo e abra no Chrome, com internet.</p>
+
+  <section class="filters" aria-label="Filtros" id="filtros">
+    <div class="seg" role="group" aria-label="Como mostrar os jogos" id="ver">
+      <button type="button" data-view="capas" aria-pressed="true">Capas</button>
+      <button type="button" data-view="lista" aria-pressed="false">Lista</button>
+      <button type="button" data-view="vitrine" aria-pressed="false">Vitrine</button>
+      <button type="button" data-view="quadro" aria-pressed="false">Traduções</button>
+    </div>
+    <div class="seg" role="group" aria-label="Arrumar os jogos" id="agrupar">
+      <button type="button" data-agr="genero" aria-pressed="true">Por gênero</button>
+      <button type="button" data-agr="status" aria-pressed="false">Por tradução</button>
+    </div>
+    <label class="sr" for="busca">Buscar jogo</label>
+    <input type="search" id="busca" placeholder="Buscar jogo">
+    <button type="button" class="btn filtros-btn" id="btn-filtros" aria-expanded="false" aria-controls="filtros-mais">Filtros<span class="filtros-n" id="filtros-n"></span></button>
+    <div class="filtros-mais" id="filtros-mais">
+    <label class="sr" for="lista">Qual lista</label>
+    <select id="lista">
+      <option value="tudo" selected>Tudo, com o catálogo completo</option>
+      <option value="all">Só as suas listas (sem o catálogo)</option>
+      <option value="1">Só a primeira</option>
+      <option value="2">Só a nova</option>
+      <option value="3">Só a de estratégia</option>
+      <option value="4">Só as minhas sugestões novas</option>
+      <option value="5">Só o catálogo completo</option>
+    </select>
+    <label class="sr" for="genero">Gênero</label>
+    <select id="genero">
+      <option value="all">Todos os gêneros</option>
+      <option value="rpg">RPG</option>
+      <option value="tatica">Tática</option>
+      <option value="estrategia">Estratégia</option>
+      <option value="acao">Ação</option>
+      <option value="plataforma">Plataforma</option>
+      <option value="investigacao">Investigação</option>
+      <option value="vn">Novela visual</option>
+      <option value="historia">Aventura e história</option>
+      <option value="souls">Estilo Souls</option>
+      <option value="gestao">Gestão</option>
+      <option value="festa">Festa e luta</option>
+    </select>
+    <label class="sr" for="romance">Romance</label>
+    <select id="romance">
+      <option value="all">Com ou sem romance</option>
+      <option value="com">Com romance (central ou dá pra namorar)</option>
+      <option value="sim">Só romance central</option>
+      <option value="algum">Qualquer romance, até de fundo</option>
+      <option value="nao">Sem romance</option>
+      <option value="nc">Romance não conferido</option>
+    </select>
+    <label class="sr" for="minha">Sua tradução</label>
+    <select id="minha">
+      <option value="all">Qualquer tradução</option>
+      <option value="feita">Tradução já feita (oficial, de fã ou sua)</option>
+      <option value="minhas">Todas que você está trabalhando</option>
+      <option value="pc">Você está traduzindo no PC</option>
+      <option value="rev">Você está revisando</option>
+      <option value="ok">Sua tradução pronta pro Switch</option>
+    </select>
+    <label class="sr" for="plano">Seus planos</label>
+    <select id="plano">
+      <option value="all">Qualquer plano</option>
+      <option value="w">Você quer jogar</option>
+      <option value="q">Você quer traduzir</option>
+      <option value="wq">Você quer jogar ou traduzir</option>
+      <option value="j">Você já jogou</option>
+      <option value="nj">Você ainda não jogou</option>
+      <option value="trad">Você já traduziu ou revisou</option>
+    </select>
+    <label class="sr" for="duracao">Duração</label>
+    <select id="duracao">
+      <option value="all">Qualquer duração</option>
+      <option value="5">Até 5 horas</option>
+      <option value="7">Até 7 horas</option>
+      <option value="10">Até 10 horas</option>
+      <option value="20">Até 20 horas</option>
+      <option value="40">Até 40 horas</option>
+      <option value="mais">Mais de 40 horas</option>
+    </select>
+    <label class="sr" for="idioma">Português</label>
+    <select id="idioma">
+      <option value="all">Com ou sem português</option>
+      <option value="dub">Dublado em PT-BR</option>
+      <option value="leg">PT-BR oficial (legendado ou dublado)</option>
+      <option value="fa">Tradução de fã pronta</option>
+      <option value="sem">Sem português (traduzir)</option>
+    </select>
+    <label class="sr" for="tamanho">Tamanho</label>
+    <select id="tamanho">
+      <option value="all">Qualquer tamanho</option>
+      <option value="p">Até 2 GB</option>
+      <option value="m">De 2 a 5 GB</option>
+      <option value="g">De 5 a 10 GB</option>
+      <option value="gg">De 10 a 20 GB</option>
+      <option value="xg">Mais de 20 GB</option>
+      <option value="cabe">Cabem no que sobra no cartão</option>
+    </select>
+    <label class="sr" for="ordem">Ordenar por</label>
+    <select id="ordem">
+      <option value="hype">Sua empolgação primeiro</option>
+      <option value="nota">Melhores notas primeiro</option>
+      <option value="size">Maiores primeiro</option>
+      <option value="small">Menores primeiro</option>
+      <option value="name">Nome (A a Z)</option>
+      <option value="curto">Mais curtos primeiro</option>
+    </select>
+    <div class="filtros-checks">
+    <label class="check" for="so-destaque"><input type="checkbox" id="so-destaque"> Só os que você destacou</label>
+    <label class="check" for="so-interesse"><input type="checkbox" id="so-interesse"> Só os que me interessam</label>
+    <label class="check" for="so-marcados"><input type="checkbox" id="so-marcados"> Só os de instalar</label>
+    <label class="check" for="so-novos" id="so-novos-rot"><input type="checkbox" id="so-novos"> <span id="so-novos-txt">Só os novos</span></label>
+    </div>
+    </div>
+    <p class="mostrando" id="mostrando" aria-live="polite"></p>
+  </section>
+
+  <div class="area-jogos">
+    <nav class="pular" id="pular" aria-label="Pular para um grupo"><div class="pular-trilho" id="pular-trilho"></div></nav>
+    <div class="groups" id="lista-jogos"></div>
+  </div>
+
+  <footer>
+    <h2>Fontes</h2>
+    <p>O romance de cada jogo é o que eu sei ou conferi; onde fiquei em dúvida, aparece "não conferido". "Dá pra namorar" quer dizer que depende das suas escolhas. "De fundo" quer dizer que existe na história, mas você não escolhe. Jogo com romance só do mesmo sexo fica no grupo "Vetar", com a etiqueta do motivo.</p>
+    <p>A etiqueta "Novo", na capa, marca os jogos que entraram na última atualização. O filtro "Só os novos" mostra só eles. O menu que fica preso no alto da tela leva direto a cada gênero, ou a cada grupo de tradução, e "Topo" volta pro começo. No computador, a tecla / vai direto pra busca.</p>
+    <p>"Sua tradução" marca o seu trabalho em cada jogo: traduzindo no PC, revisando ou pronta pro Switch. Você muda isso na ficha do jogo, e a marcação fica salva só neste navegador. No filtro, "Tradução já feita" junta os jogos com PT-BR oficial, os com tradução pronta e os que você marcou como prontos.</p>
+    <p>No celular, as capas aparecem duas por linha. Em ⚙ Ajustes você escolhe de 1 (capa enorme) a 4 por linha. Na ficha de cada jogo, a capa aparece grande no topo: toque nela, ou numa foto, pra ver em tela cheia, e deslize pro lado pra passar.</p>
+    <p>Imagens no aparelho: cada gênero tem um botão "⬇ Baixar" no título. Ele guarda neste navegador as capas e as fotos já diminuídas pelo wsrv.nl, um serviço gratuito de imagens. Daí em diante elas abrem na hora, até sem internet; "Apagar" tira de novo. É uma cópia pra uso pessoal: o arquivo só tem os links, nada é publicado. O painel "📦 Imagens no aparelho", no alto, mostra tudo o que está guardado.</p>
+    <p>As capas e as fotos de cada jogo vêm do servidor de imagens da própria eShop. Dentro do app do Claude elas não carregam: abra o arquivo no Chrome pra ver. Os resumos de "Ver o jogo" fui eu que escrevi, sem spoiler.</p>
+    <p>As fontes da primeira lista estão no <a href="https://claude.ai/artifact/GkUhWSUEb8ZBSLazb4bgja">documento anterior</a>. As da lista nova e das conferências de 18 e 23/11:</p>
+    <ul>
+      <li><a href="https://github.com/blawar/titledb">Banco de dados da eShop (titledb): tamanhos, idiomas e capas, inclusive da lista de estratégia</a></li>
+      <li><a href="https://multiplayer.it/notizie/eshop-svela-peso-metroid-prime-4-octopath-traveler-0-altri-giochi-uscita-switch-switch-2.html">Metroid Prime 4: 26,3 GB no Switch 1</a></li>
+      <li><a href="https://gamebrew.org/wiki/Aonatsu_Line_-_Blue,_Summertime_Blue_Switch_-_English_Translation">Aonatsu Line: tradução de fã pro inglês</a></li>
+      <li><a href="https://nintendoeverything.com/tag/bioshock-the-collection/">BioShock: tamanho dos 3 jogos</a></li>
+      <li><a href="https://www.nintendo.com/us/store/products/xcom-2-collection-switch/">XCOM 2 Collection na eShop</a></li>
+      <li><a href="https://www.nexusmods.com/xcom2/mods/809?tab=docs">XCOM 2: tradução de fã completa</a></li>
+      <li><a href="https://www.nintendo.com/en-gb/Games/Nintendo-Switch-games/Baldur-s-Gate-and-Baldur-s-Gate-II-Enhanced-Editions-1647359.html">Baldur's Gate: idiomas por jogo</a></li>
+      <li><a href="https://nintendo.co.uk/Games/Nintendo-Switch/Planescape-Torment-and-Icewind-Dale-Enhanced-Editions-1653166.html">Planescape e Icewind Dale: idiomas</a></li>
+      <li><a href="https://proximonivel.pt/baldurs-gate-baldurs-gate-2-e-icewind-dale-enhanced-editions-recebe-patch-para-64-bit/">Icewind Dale: PT-BR no PC</a></li>
+      <li><a href="https://nintendo.co.uk/Games/Nintendo-Switch-download-software/Dragon-s-Dogma-Dark-Arisen-1530267.html">Dragon's Dogma: idiomas e tamanho</a></li>
+      <li><a href="https://olhardigital.com.br/2026/06/19/games-e-consoles/review-persona-5-royal/">Persona 5 Royal: review e idiomas</a></li>
+      <li><a href="https://ec.nintendo.com/NZ/en/bundles/70070000019759">Metro Redux: tamanho</a></li>
+      <li><a href="https://www.nintendo.com/games/detail/graveyard-keeper-2-switch">Graveyard Keeper 2: idiomas</a></li>
+      <li><a href="https://thunderstore.io/c/graveyard-keeper-2/p/duhhbzz/GK2Plus/changelog">Graveyard Keeper 2: mod de PC</a></li>
+      <li><a href="https://www.dekudeals.com/items/language-pack-brazilian-portuguese">Dragon Ball Heroes: pacote PT-BR</a></li>
+      <li><a href="https://canaltech.com.br/games/digimon-survive-nao-compre-antes-de-ler-esse-texto-222161/">Digimon Survive com PT-BR</a></li>
+      <li><a href="https://www.folhavitoria.com.br/games/digimon-world-next-order-esta-disponivel-para-pc-e-switch/">Digimon World Next Order com PT-BR</a></li>
+      <li><a href="https://www.playstation.com/pt-br/games/digimon-story-time-stranger/">Digimon Time Stranger: idiomas</a></li>
+      <li><a href="https://www.nintendo.com/us/store/products/digimon-story-time-stranger-switch/">Digimon Time Stranger: versão de Switch 1</a></li>
+      <li><a href="https://ovicio.com.br/review-dragon-quest-vii-reimagined/amp/">Dragon Quest VII Reimagined sem PT-BR</a></li>
+      <li><a href="https://www.rpgsite.net/news/20626-dragon-quest-monsters-the-withered-world-releases-on-december-3">Dragon Quest Monsters: data</a></li>
+      <li><a href="https://gematsu.com/2026/05/dragon-quest-monsters-the-withered-world-announced-for-ps5-xbox-series-switch-2-switch-and-pc">Dragon Quest Monsters: Switch e Switch 2</a></li>
+      <li><a href="https://www.dekudeals.com/items/lost-hellden">Lost Hellden: situação</a></li>
+      <li><a href="https://nintendoeverything.com/?p=846186">Inazuma Eleven RE: anúncio no Switch</a></li>
+      <li><a href="https://www.animenewsnetwork.com/.236298">Inazuma Eleven RE: idiomas com PT-BR</a></li>
+      <li><a href="https://www.dekudeals.com/items/until-then">Until Then: idiomas</a></li>
+      <li><a href="https://steamcommunity.com/app/1574820/discussions/0/601896014188679619">Until Then: tradução de fã</a></li>
+      <li><a href="https://store.playstation.com/en-gb/product/EP4295-PPSA27765_00-ACDONPS5000000WW">Agatha Christie no PS5: idiomas</a></li>
+      <li><a href="https://www.dekudeals.com/items/ni-no-kuni-ii-revenant-kingdom-princes-edition?format=all">Ni no Kuni II: idiomas e tamanho</a></li>
+      <li><a href="https://www.nintendo.com/en-ca/store/products/titan-quest-switch/">Titan Quest: tamanho</a></li>
+      <li><a href="https://www.nintendo.com/pt-pt/Games/Nintendo-Switch-games/Game-1864801.html">Tropico 6: idiomas e tamanho</a></li>
+      <li><a href="https://www.dekudeals.com/items/aragami-2">Aragami 2: idiomas</a></li>
+      <li><a href="https://fepulo.itch.io/needy-streamer-overload-ptbr">Needy Streamer Overload: tradução de fã</a></li>
+      <li><a href="https://game8.co/games/Octopath-Traveler-0/archives/568881">Octopath Traveler 0: sem romance</a></li>
+      <li><a href="https://rogueranker.com/?p=12135">Hades II: romance</a></li>
+      <li><a href="https://grindnstrat.com/?p=3211">The Hundred Line: rota de romance</a></li>
+      <li><a href="https://segmentnext.com/wartales-relationships">Wartales: relações entre companheiros</a></li>
+      <li><a href="https://pkgtraducoes.com.br/traducoes/tloh-trails-from-zero-pc-switch/">Trails from Zero: tradução da PKG</a></li>
+      <li><a href="https://pkgtraducoes.com.br/traducoes/firewatch/">Firewatch: tradução da PKG</a></li>
+      <li><a href="https://pkgtraducoes.com.br/traducoes/rune-factory-guardians-of-azuma/">Rune Factory: Guardians of Azuma: tradução da PKG</a></li>
+      <li><a href="https://www.rpgsite.net/news/18310-turn-based-rpg-the-nameless-slay-dragon-now-available-for-nintendo-switch">The Nameless: Slay Dragon no Switch</a></li>
+      <li><a href="https://turnbasedlovers.com/?p=52078">Chrono Ark: análise</a></li>
+      <li><a href="https://tvtropes.org/pmwiki/pmwiki.php/VideoGame/VA11HallA">VA-11 Hall-A: o romance do jogo</a></li>
+      <li><a href="https://okazu.yuricon.com/2017/04/12/yuri-visual-novel-va-11-hall-a-guest-review-by-louis-p/">VA-11 Hall-A: a história da Jill</a></li>
+      <li><a href="https://steamcommunity.com/app/208580/discussions/0/3160957541901475941">KOTOR II: tradução de fã no PC</a></li>
+      <li><a href="https://www.dualshockers.com/rune-factory-5-marriage-candidates-bachelor-and-bachelorette-characters/">Rune Factory 5: pretendentes</a></li>
+      <li><a href="https://www.siliconera.com/is-there-romance-in-star-ocean-the-second-story-r/">Star Ocean 2 R: romance e finais</a></li>
+      <li><a href="https://www.avclub.com/best-final-fantasy-romances">Final Fantasy VIII e IX: os romances</a></li>
+      <li><a href="https://www.inverse.com/gaming/best-rpg-duology-ever-made-remaster-lunar-collection">Lunar: aventura com romance</a></li>
+      <li><a href="https://steamcommunity.com/app/991270/discussions/0/2145343189636735033">Trails of Cold Steel III: opções de romance</a></li>
+      <li><a href="https://www.siliconera.com/is-there-romance-in-trails-through-daybreak/">Trails through Daybreak: romance</a></li>
+      <li><a href="https://game8.co/games/Xenoblade-Chronicles-X/archives/497730">Xenoblade: romance na série</a></li>
+      <li><a href="https://www.yekbot.com/shining-resonance-refrain-night-event-and-dating/">Shining Resonance Refrain: encontros</a></li>
+      <li><a href="https://www.thegamer.com/story-of-seasons-pioneers-of-olive-town-dating-guide/">Pioneers of Olive Town: pretendentes</a></li>
+      <li><a href="https://game8.co/games/Story-of-Seasons-Grand-Bazaar/archives/543272">Grand Bazaar: pretendentes</a></li>
+      <li><a href="https://www.siliconera.com/?p=994529">My Time at Sandrock: romance</a></li>
+      <li><a href="https://gaymingmag.com/?p=40638">Wylde Flowers: pretendentes</a></li>
+      <li><a href="https://escapistmagazine.com/all-marriage-candidates-in-echoes-of-the-plum-grove">Echoes of the Plum Grove: pretendentes</a></li>
+      <li><a href="https://cozygamereviews.com/farming-sims/best-farming-sims-with-romance/">Fazendas com romance (Sun Haven, Roots of Pacha, Potion Permit)</a></li>
+      <li><a href="https://ballstatedaily.com/article/2020/12/the-game-bakers-create-cuddly-and-cute-haven-when-we-severely-need-one">Haven: o casal</a></li>
+      <li><a href="https://digitaltrends.com/gaming/romantic-video-games">To the Moon: a história de amor</a></li>
+      <li><a href="https://store.steampowered.com/sub/44723">The House in Fata Morgana: história de amor</a></li>
+      <li><a href="https://www.gamedeveloper.com/press-release/for-valentines-day-try-a-dating-sim-that-values-friendship-as-much-as-attraction">Mask of the Rose: romance pra todos os gêneros</a></li>
+      <li><a href="https://www.imore.com/best-otome-games-nintendo-switch">Melhores otome do Switch</a></li>
+      <li><a href="https://otomekitten.com/2023/06/27/charade-maniacs-review-nintendo-switch">Charade Maniacs: análise</a></li>
+      <li><a href="https://steamcommunity.com/app/1578650/discussions/0/3757725518104731411">Citizen Sleeper: sem romance</a></li>
+      <li><a href="https://steamcommunity.com/app/346940/discussions/0/528398719805455049">Shadowrun: Hong Kong: sem romance</a></li>
+      <li><a href="https://www.siliconera.com/review-tales-from-toyotoki-leaves-you-rooting-for-the-kids/">Tales from Toyotoki: análise</a></li>
+      <li><a href="https://moviesgamesandtech.com/2024/09/01/review-tales-from-toyotoki-arrival-of-the-witch">Tales from Toyotoki: o romance</a></li>
+      <li><a href="https://www.hardcoregaming101.net/grandia/">Grandia: o romance de Justin e Feena</a></li>
+      <li><a href="https://www.rpgfan.com/review/grandia-ii-5/">Grandia II: o triângulo amoroso</a></li>
+      <li><a href="https://uk-anime.net/Games/Tales_of_Xillia_Remastered">Tales of Xillia Remastered: Jude e Milla</a></li>
+      <li><a href="https://www.tvtropes.org/pmwiki/pmwiki.php/Characters/TokyoXanaduXanaduResearchClub">Tokyo Xanadu: o romance de fundo</a></li>
+      <li><a href="https://www.rpgfan.com/review/star-ocean-first-departure-r/">Star Ocean First Departure R: Ações Privadas e finais</a></li>
+      <li><a href="https://en.wikipedia.org/wiki/Star_Ocean_(video_game)">Star Ocean: Millie e Roddick</a></li>
+      <li><a href="https://www.siliconera.com/is-there-romance-in-ys-x-nordics/">Ys X: Nordics: sem romance</a></li>
+      <li><a href="https://www.siliconera.com/is-there-romance-in-eiyuden-chronicle-hundred-heroes/">Eiyuden Chronicle: sem romance</a></li>
+      <li><a href="https://www.escapistmagazine.com/avowed-obsidian-no-romance-companions-good-thing/">Pillars of Eternity: sem romance no primeiro</a></li>
+      <li><a href="https://tvtropes.org/pmwiki/pmwiki.php/Characters/Gnosia">Gnosia: os momentos de romance</a></li>
+      <li><a href="https://www.nintendolife.com/games/switch-eshop/overboard">Overboard!: seduzir e se apaixonar</a></li>
+      <li><a href="https://gamingtrend.com/feature/reviews/the-pixel-art-cyberpunk-title-to-rule-them-all-virtuaverse-review/">VirtuaVerse: a busca pela namorada</a></li>
+      <li><a href="https://www.gog.com/en/game/virtuaverse?page=19">VirtuaVerse: a cena de sexo obrigatória</a></li>
+      <li><a href="https://www.cubed3.com/games/reviews/nintendo-switch/unavowed">Unavowed: análise do Switch</a></li>
+      <li><a href="https://adventuregamers.com/games/brok-the-investigator">BROK the InvestiGator: pai e filho</a></li>
+      <li><a href="https://pkgtraducoes.com.br/traducoes/xenoblade-chronicles-x-definitive-edition-switch/">Xenoblade Chronicles X: tradução da PKG</a></li>
+      <li><a href="https://pkgtraducoes.com.br/traducoes/tokyo-xanadu-ex-pc-switch/">Tokyo Xanadu eX+: tradução da PKG</a></li>
+      <li><a href="https://pkgtraducoes.com.br/traducoes/projeto-de-traducao-kingdoms-of-amalur-re-reckoning/">Kingdoms of Amalur: tradução da PKG</a></li>
+      <li><a href="https://pkgtraducoes.com.br/traducoes/ys-ix-monstrum-nox-switch-pc-steam/">Ys IX: tradução da PKG</a></li>
+      <li><a href="https://pkgtraducoes.com.br/traducoes/ys-nordics/">Ys X: tradução da PKG (versão 1.0)</a></li>
+      <li><a href="https://pkgtraducoes.com.br/traducoes/shin-megami-tensei-3-nocturne-hd-remaster/">Shin Megami Tensei III Nocturne: tradução da PKG</a></li>
+      <li><a href="https://nintendoeverything.com/the-thaumaturge-cooming-to-nintendo-switch/">The Thaumaturge: lançamento no Switch 1</a></li>
+      <li><a href="https://www.dekudeals.com/items/the-thaumaturge?store=eshop">The Thaumaturge: tamanho e idiomas no Switch</a></li>
+      <li><a href="https://store.steampowered.com/app/1684350/">The Thaumaturge: idiomas no PC, sem PT-BR</a></li>
+      <li><a href="https://raiderking.com/the-thaumaturge-is-there-romance-answered/">The Thaumaturge: sem romance</a></li>
+      <li><a href="https://www.nintendo.com/en-gb/Games/Nintendo-Switch-download-software/Frostpunk-3215042.html">Frostpunk: Switch 1, idiomas e tamanho</a></li>
+      <li><a href="https://whitewolf.fandom.com/wiki/Emem_Louis">Swansong: o romance da Emem com a Hilda (veto, ficou de fora)</a></li>
+      <li><a href="https://www.grimdarkmagazine.com/review-vampire-the-masquerade-shadows-of-new-york/">Shadows of New York: a namorada da Julia (veto, ficou de fora)</a></li>
+      <li><a href="https://steamcommunity.com/app/1096410/discussions/0/1750142242509911504/?ctp=3">Coteries of New York: o pouco de romance</a></li>
+      <li><a href="https://steamcommunity.com/app/1342620/discussions/search/?q=romance">Heart of the Forest: romance de fundo</a></li>
+      <li><a href="https://store.steampowered.com/app/379430/">Kingdom Come: Deliverance: PT-BR oficial no PC</a></li>
+      <li><a href="https://store.steampowered.com/app/552620/">ATOM RPG: PT-BR oficial no PC</a></li>
+      <li><a href="https://store.steampowered.com/app/231200/">Kentucky Route Zero: PT-BR oficial no PC</a></li>
+      <li><a href="https://store.steampowered.com/app/1115690/">Yes, Your Grace: PT-BR oficial no PC</a></li>
+      <li><a href="https://store.steampowered.com/app/461950/">Beat Cop: PT-BR oficial no PC</a></li>
+      <li><a href="https://steamcommunity.com/app/718670/discussions/search/?q=romance">Cultist Simulator: romance com seguidores</a></li>
+      <li><a href="https://thatvideogameblog.com/review-demonschool-ns/">Demonschool: romance com colegas de qualquer gênero</a></li>
+      <li><a href="https://steamcommunity.com/app/2355020/discussions/search/?q=romance">Lost Hellden: sem romance</a></li>
+      <li><a href="https://steamcommunity.com/app/4358690/discussions/search/?q=romance">Graveyard Keeper 2: romances entre personagens</a></li>
+      <li><a href="https://steamcommunity.com/app/1155970/discussions/search/?q=romance">Roadwarden: sem romance</a></li>
+      <li><a href="https://www.nintendolife.com/reviews/nintendo-switch/kotodama_the_7_mysteries_of_fujisawa">Kotodama: protagonista sem gênero fixo</a></li>
+      <li><a href="https://steamcommunity.com/app/994730/discussions/search/?q=romance">Banner of the Maid: quase sem romance</a></li>
+      <li><a href="https://steamcommunity.com/app/1135300/discussions/search/?q=romance">King's Bounty II: sem romance</a></li>
+      <li><a href="https://pkgtraducoes.com.br/traducoes/beholder-2/">Beholder 2: tradução da PKG</a></li>
+      <li><a href="https://pkgtraducoes.com.br/traducoes/fire-emblem-warriors-three-hopes/">Fire Emblem Warriors: Three Hopes: tradução da PKG</a></li>
+      <li><a href="https://pkgtraducoes.com.br/traducoes/brigandine-pc-e-switch/">Brigandine: tradução da PKG</a></li>
+    </ul>
+  </footer>
+</main>
+<dialog id="ficha" aria-labelledby="ficha-nome"></dialog>
+<div class="barra" id="barra" aria-live="polite"><div class="barra-meter"><div class="barra-fill"></div></div><p class="barra-txt"></p><p class="barra-aviso" id="barra-aviso" hidden>Capas bloqueadas aqui: abra o arquivo no Chrome.</p><p class="barra-aviso" id="aviso-salvar" hidden style="color: var(--veto)">⚠ Aqui suas marcações NÃO ficam salvas. Abra o arquivo no Chrome ou use "Guardar uma cópia das suas marcações" antes de fechar.</p></div>
+
+<script>
+// carrega os pacotes de gênero que estão neste aparelho e depois o app, nessa ordem
+(function () {
+  "use strict";
+  var PAC = {"historia": {"v": "b125d2e42a", "n": 3447, "kb": 2030}, "festa": {"v": "f8ccbf858f", "n": 3500, "kb": 2038}, "acao": {"v": "5a3446ded7", "n": 2248, "kb": 1305}, "plataforma": {"v": "33da101d95", "n": 2414, "kb": 1414}, "estrategia": {"v": "9672715b64", "n": 2069, "kb": 1216}, "gestao": {"v": "d2a647d276", "n": 2590, "kb": 1516}, "rpg": {"v": "b9cd42cf8e", "n": 2390, "kb": 1418}};
+  var APP = ["app/01.js?v=3862aa47b8", "app/02.js?v=853e066705", "app/03.js?v=de80d68f6a", "app/04.js?v=f9a7a7e2ec", "app/05.js?v=aedf219313", "app/06.js?v=4b04817e9e", "app/07.js?v=75381df2d3", "app/08.js?v=2cde205886", "app/09.js?v=56b62670f3", "app/10.js?v=92367c036b", "app/11.js?v=e281f1f33d", "app/12.js?v=3ed979dffd"];
+  var CHAVE = "estante-switch-v1-pacotes";
+  var inst = [];
+  try { inst = JSON.parse(localStorage.getItem(CHAVE) || "[]"); } catch (e) {}
+  inst = inst.filter(function (g) { return PAC[g]; });
+  window.PACOTES = PAC;
+  window.PACOTES_INST = inst;
+  window.PACOTES_FALHOU = [];
+  var lista = inst.map(function (g) { return "pacotes/" + g + ".js?v=" + PAC[g].v; }).concat(APP);
+  lista.forEach(function (s) {
+    var el = document.createElement("script");
+    el.src = s;
+    el.async = false;  // roda na ordem da lista
+    el.onerror = function () {
+      if (s.indexOf("pacotes/") === 0) window.PACOTES_FALHOU.push(s.split("/")[1].split(".")[0]);
+      else { var c = document.getElementById("carregando"); if (c) c.textContent = "Não deu pra abrir. Confira a internet e abra de novo."; }
+    };
+    document.body.appendChild(el);
+  });
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
+    var tinha = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register("sw.js").catch(function () {});
+    // versão nova do app: recarrega uma vez sozinho
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (tinha && !window.__recarregou) { window.__recarregou = true; location.reload(); }
+    });
+  }
+})();
+</script>
+</body>
+</html>
