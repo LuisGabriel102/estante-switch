@@ -11,7 +11,7 @@
 (function () {
   "use strict";
   var SELO_CAPA = true;       // selinho 🟢/🔴 na capa dos jogos (false = desliga)
-  var SELO_AMARELO = false;   // 🟡 na capa também
+  var SELO_AMARELO = true;    // 🟡 na capa também (26/11: o dono pediu bolinha em todos)
   var MAX = 4;                // itens em cada lista do "Pra você"
   var N_PAR = 8;              // capas em "Parecidos com este"
 

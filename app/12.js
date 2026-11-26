@@ -22,12 +22,14 @@
 
   // ---------- o texto do topo: o total certo, e um aviso enquanto o catálogo chega ----------
   var resumoAnt = renderResumo;
+  // a data vem do texto que o montador grava no topo (pre_lista.py põe a data do dia)
+  var ATU = (function () { var s = document.getElementById("sub"), m = s && /Atualizado em ([\d\/]+)/.exec(s.textContent); return m ? m[1] : ""; })();
   renderResumo = function () {
     var r = resumoAnt.apply(this, arguments);
     var sub = document.getElementById("sub");
     if (sub) sub.textContent = carregando()
       ? mil(DATA.length) + " jogos das suas listas já aqui. Chegando o catálogo: mais " + mil(nCat) + " jogos…"
-      : mil(DATA.length) + " jogos: as suas listas, as minhas sugestões e o catálogo, juntos. Atualizado em 23/11/2026.";
+      : mil(DATA.length) + " jogos: as suas listas, as minhas sugestões e o catálogo, juntos." + (ATU ? " Atualizado em " + ATU + "." : "");
     return r;
   };
 
