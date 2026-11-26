@@ -12,7 +12,7 @@
   var lista = document.getElementById("lista-jogos");
   if (!lista || !ficha) return;
   var porId = {};
-  DATA.forEach(function (g) { porId[g.id] = g; });
+  DATA.forEach(function (g) { porId[g.id] = g; }); (window.CAT_AO_CRESCER || []).push(function (novos) { novos.forEach(function (g) { porId[g.id] = g; }); });
 
   // faixa da tela que a lista realmente ocupa (sem o menu preso no alto e sem a barra de baixo)
   function topoLivre() {

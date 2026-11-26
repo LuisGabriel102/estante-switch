@@ -39,6 +39,7 @@
     return false;
   }
   var ult = null, exatos = null, tol = null, tolerante = false;
+  (window.CAT_AO_CRESCER || []).push(function () { ult = null; porId = null; });
   function prep(q) {
     if (ult === q) return;
     ult = q;

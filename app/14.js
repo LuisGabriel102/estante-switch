@@ -9,7 +9,7 @@
   var nao = new Set();
   try { nao = new Set(JSON.parse(localStorage.getItem(KN) || "[]")); } catch (e) {}
   var porId = {};
-  DATA.forEach(function (g) { porId[g.id] = g; });
+  DATA.forEach(function (g) { porId[g.id] = g; }); (window.CAT_AO_CRESCER || []).push(function (novos) { novos.forEach(function (g) { porId[g.id] = g; }); });
   var aba = "jogar";
   // romance é o que mais importa: "Só com romance" começa ligado
   var KR = KEY + "-R-soRom", soRom = true;
@@ -55,7 +55,7 @@
   }
 
   function excluidos(qual) {
-    var fora = new Set(nao), vistos = 0;
+    var fora = new Set(nao), vistos = 0; if (window.T_dispensados) window.T_dispensados().forEach(function (id) { fora.add(id); });
     // o que você já está traduzindo, revisando ou terminou
     Object.keys(state.mt || {}).forEach(function (id) { if (state.mt[id]) fora.add(id); });
     DATA.forEach(function (g) { if (g.mt) fora.add(g.id); });  // traduções suas já registradas na lista

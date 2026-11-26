@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   var porId = {};
-  DATA.forEach(function (g) { porId[g.id] = g; });
+  DATA.forEach(function (g) { porId[g.id] = g; }); (window.CAT_AO_CRESCER || []).push(function (novos) { novos.forEach(function (g) { porId[g.id] = g; }); });
   var atual = null;
   function calmo() { return !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches); }
 

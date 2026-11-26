@@ -8,7 +8,7 @@
   var SELECTS = {busca: "q", lista: "list", genero: "genre", romance: "rom", minha: "minha", tamanho: "size", plano: "plano", duracao: "dur", idioma: "idioma", ordem: "sort"};
   var CHECKS = {"so-destaque": "onlyHype", "so-interesse": "onlyFav", "so-marcados": "onlyMarked", "so-novos": "onlyNew"};
   var porId = {};
-  DATA.forEach(function (g) { porId[g.id] = g; });
+  DATA.forEach(function (g) { porId[g.id] = g; }); (window.CAT_AO_CRESCER || []).push(function (novos) { novos.forEach(function (g) { porId[g.id] = g; }); });
   var fichaId = null, restaurando = true;
 
   // ---------- histórico ----------

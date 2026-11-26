@@ -861,7 +861,7 @@ button.s-lin { cursor: pointer; }
 <main class="wrap">
   <header>
     <h1>Estante do Switch</h1>
-    <p class="sub" id="sub">As suas listas e as minhas sugestões, juntas. Atualizado em 23/11/2026.</p>
+    <p class="sub" id="sub">As suas listas e as minhas sugestões, juntas. Atualizado em 26/11/2026.</p>
     <p class="resumo" id="resumo"></p>
     <div class="p-pac" id="p-pac"></div>
   </header>
@@ -922,7 +922,7 @@ button.s-lin { cursor: pointer; }
     </details>
   </section>
 
-  <p class="aviso-capas" id="aviso-capas" hidden><strong>As capas não carregaram aqui.</strong> Isso acontece quando a página abre dentro do app do Claude, que bloqueia imagens de fora, ou quando está sem internet. Baixe o arquivo e abra no Chrome, com internet.</p>
+  <p class="aviso-capas" id="aviso-capas" hidden><strong>As capas não carregaram aqui.</strong> Isso acontece sem internet ou quando o servidor de imagens está fora do ar. Confira a internet e abra de novo.</p>
 
   <section class="filters" aria-label="Filtros" id="filtros">
     <div class="seg" role="group" aria-label="Como mostrar os jogos" id="ver">
@@ -953,16 +953,29 @@ button.s-lin { cursor: pointer; }
     <select id="genero">
       <option value="all">Todos os gêneros</option>
       <option value="rpg">RPG</option>
+      <option value="rpgnicho">RPG de nicho</option>
+      <option value="roguelike">Roguelike</option>
       <option value="tatica">Tática</option>
-      <option value="estrategia">Estratégia</option>
-      <option value="acao">Ação</option>
-      <option value="plataforma">Plataforma</option>
-      <option value="investigacao">Investigação</option>
       <option value="vn">Novela visual</option>
+      <option value="investigacao">Investigação</option>
       <option value="historia">Aventura e história</option>
       <option value="souls">Estilo Souls</option>
-      <option value="gestao">Gestão</option>
-      <option value="festa">Festa e luta</option>
+      <option value="metroidvania">Metroidvania</option>
+      <option value="acao">Ação</option>
+      <option value="luta">Luta</option>
+      <option value="tiro">Tiro</option>
+      <option value="plataforma">Plataforma</option>
+      <option value="terror">Terror</option>
+      <option value="sobrevivencia">Sobrevivência e construção</option>
+      <option value="vida">Fazenda e vida tranquila</option>
+      <option value="gestao">Gestão e simulação</option>
+      <option value="estrategia">Estratégia</option>
+      <option value="puzzle">Puzzle e raciocínio</option>
+      <option value="casual">Casual e passatempo</option>
+      <option value="corrida">Corrida</option>
+      <option value="esporte">Esporte</option>
+      <option value="festa">Festa</option>
+      <option value="musica">Música e ritmo</option>
     </select>
     <label class="sr" for="romance">Romance</label>
     <select id="romance">
@@ -1050,8 +1063,8 @@ button.s-lin { cursor: pointer; }
     <p>A etiqueta "Novo", na capa, marca os jogos que entraram na última atualização. O filtro "Só os novos" mostra só eles. O menu que fica preso no alto da tela leva direto a cada gênero, ou a cada grupo de tradução, e "Topo" volta pro começo. No computador, a tecla / vai direto pra busca.</p>
     <p>"Sua tradução" marca o seu trabalho em cada jogo: traduzindo no PC, revisando ou pronta pro Switch. Você muda isso na ficha do jogo, e a marcação fica salva só neste navegador. No filtro, "Tradução já feita" junta os jogos com PT-BR oficial, os com tradução pronta e os que você marcou como prontos.</p>
     <p>No celular, as capas aparecem duas por linha. Em ⚙ Ajustes você escolhe de 1 (capa enorme) a 4 por linha. Na ficha de cada jogo, a capa aparece grande no topo: toque nela, ou numa foto, pra ver em tela cheia, e deslize pro lado pra passar.</p>
-    <p>Imagens no aparelho: cada gênero tem um botão "⬇ Baixar" no título. Ele guarda neste navegador as capas e as fotos já diminuídas pelo wsrv.nl, um serviço gratuito de imagens. Daí em diante elas abrem na hora, até sem internet; "Apagar" tira de novo. É uma cópia pra uso pessoal: o arquivo só tem os links, nada é publicado. O painel "📦 Imagens no aparelho", no alto, mostra tudo o que está guardado.</p>
-    <p>As capas e as fotos de cada jogo vêm do servidor de imagens da própria eShop. Dentro do app do Claude elas não carregam: abra o arquivo no Chrome pra ver. Os resumos de "Ver o jogo" fui eu que escrevi, sem spoiler.</p>
+    <p>Imagens no aparelho: cada gênero tem um botão "⬇ Baixar" no título. Ele guarda neste navegador as capas e as fotos já diminuídas pelo wsrv.nl, um serviço gratuito de imagens. Daí em diante elas abrem na hora, até sem internet; "Apagar" tira de novo. As imagens guardadas ficam só neste aparelho. O painel "📦 Imagens no aparelho", no alto, mostra tudo o que está guardado.</p>
+    <p>As capas e as fotos de cada jogo vêm do servidor de imagens da própria eShop. Sem internet, elas só aparecem se o gênero estiver em "Imagens no aparelho". Os resumos de "Ver o jogo" fui eu que escrevi, sem spoiler.</p>
     <p>As fontes da primeira lista estão no <a href="https://claude.ai/artifact/GkUhWSUEb8ZBSLazb4bgja">documento anterior</a>. As da lista nova e das conferências de 18 e 23/11:</p>
     <ul>
       <li><a href="https://github.com/blawar/titledb">Banco de dados da eShop (titledb): tamanhos, idiomas e capas, inclusive da lista de estratégia</a></li>
@@ -1173,60 +1186,118 @@ button.s-lin { cursor: pointer; }
   </footer>
 </main>
 <dialog id="ficha" aria-labelledby="ficha-nome"></dialog>
-<div class="barra" id="barra" aria-live="polite"><div class="barra-meter"><div class="barra-fill"></div></div><p class="barra-txt"></p><p class="barra-aviso" id="barra-aviso" hidden>Capas bloqueadas aqui: abra o arquivo no Chrome.</p><p class="barra-aviso" id="aviso-salvar" hidden style="color: var(--veto)">⚠ Aqui suas marcações NÃO ficam salvas. Abra o arquivo no Chrome ou use "Guardar uma cópia das suas marcações" antes de fechar.</p></div>
+<div class="barra" id="barra" aria-live="polite"><div class="barra-meter"><div class="barra-fill"></div></div><p class="barra-txt"></p><p class="barra-aviso" id="barra-aviso" hidden>As capas não carregaram: confira a internet.</p><p class="barra-aviso" id="aviso-salvar" hidden style="color: var(--veto)">⚠ Aqui suas marcações NÃO ficam salvas (navegação anônima?). Abra no Chrome normal ou use "Guardar uma cópia das suas marcações" antes de fechar.</p></div>
 
 <script>
-// carrega os pacotes de gênero que estão neste aparelho e depois o app, nessa ordem
+// abre primeiro as suas listas (rápido) e depois, em segundo plano, o catálogo inteiro (todos os gêneros)
+// - quem nunca mexeu vê tudo; no "📦 Gêneros do catálogo" dá pra tirar algum gênero (fica guardado como "tirados")
+// - os pacotes vêm logo depois das listas, todos ao mesmo tempo, e ficam guardados pra abrir sem internet
 (function () {
   "use strict";
-  var PAC = {"historia": {"v": "90848c896c", "n": 3447, "kb": 2030}, "festa": {"v": "dce9441fa7", "n": 3500, "kb": 2038}, "acao": {"v": "5a3446ded7", "n": 2248, "kb": 1305}, "plataforma": {"v": "33da101d95", "n": 2414, "kb": 1414}, "estrategia": {"v": "9672715b64", "n": 2069, "kb": 1216}, "gestao": {"v": "df172dfe08", "n": 2590, "kb": 1517}, "rpg": {"v": "9b1430e042", "n": 2304, "kb": 1366}};
-  var APP = ["app/01.js?v=f81b061f81", "app/02.js?v=853e066705", "app/03.js?v=de80d68f6a", "app/04.js?v=f9a7a7e2ec", "app/05.js?v=aedf219313", "app/06.js?v=4b04817e9e", "app/07.js?v=75381df2d3", "app/08.js?v=2cde205886", "app/09.js?v=56b62670f3", "app/10.js?v=92367c036b", "app/11.js?v=e281f1f33d", "app/12.js?v=3ed979dffd", "app/13.js?v=00641d42a6", "app/14.js?v=3215ed38cd"];
-  var CHAVE = "estante-switch-v1-pacotes";
-  var inst = [];
-  try { inst = JSON.parse(localStorage.getItem(CHAVE) || "[]"); } catch (e) {}
-  inst = inst.filter(function (g) { return PAC[g]; });
+  var PAC = {"acao": {"v": "22856885f3", "n": 2589, "kb": 1999}, "musica": {"v": "0061ed6e93", "n": 169, "kb": 132}, "luta": {"v": "a214d30c12", "n": 347, "kb": 274}, "roguelike": {"v": "cf5afce205", "n": 552, "kb": 439}, "corrida": {"v": "169b3fa1ce", "n": 803, "kb": 627}, "puzzle": {"v": "d81890910c", "n": 2202, "kb": 1711}, "festa": {"v": "c90d2f1fcc", "n": 440, "kb": 344}, "estrategia": {"v": "b5cc973e46", "n": 530, "kb": 415}, "vida": {"v": "dab5c8e052", "n": 326, "kb": 259}, "casual": {"v": "4360e3e635", "n": 1836, "kb": 1436}, "esporte": {"v": "624d933092", "n": 674, "kb": 529}, "historia": {"v": "eafad6e941", "n": 1446, "kb": 1132}, "tiro": {"v": "7d13adac29", "n": 1467, "kb": 1154}, "sobrevivencia": {"v": "dc6640afa8", "n": 164, "kb": 132}, "plataforma": {"v": "74290b4265", "n": 1172, "kb": 920}, "rpgnicho": {"v": "ddbe15f07e", "n": 933, "kb": 747}, "rpg": {"v": "e6180bb1de", "n": 238, "kb": 192}, "tatica": {"v": "7935fad4df", "n": 103, "kb": 83}, "gestao": {"v": "d64a6c3148", "n": 1131, "kb": 889}, "metroidvania": {"v": "4c1d6a38a3", "n": 214, "kb": 173}, "terror": {"v": "1ef4341336", "n": 550, "kb": 434}, "investigacao": {"v": "bbbd59ef11", "n": 191, "kb": 153}, "vn": {"v": "d8ea2b535c", "n": 475, "kb": 389}, "souls": {"v": "081f29e466", "n": 19, "kb": 15}};
+  var APP = ["app/01.js?v=49a2e09bc7", "app/02.js?v=853e066705", "app/03.js?v=de80d68f6a", "app/04.js?v=f9a7a7e2ec", "app/05.js?v=aedf219313", "app/06.js?v=937b741612", "app/07.js?v=75381df2d3", "app/08.js?v=2cde205886", "app/09.js?v=10d3521e10", "app/10.js?v=b26c303a2c", "app/11.js?v=e281f1f33d", "app/12.js?v=d67da9bb4b", "app/13.js?v=d7c63e99ea", "app/14.js?v=a1d2fb87bb", "app/15.js?v=390cc3c368", "app/16.js?v=103e2ebfd9", "app/17.js?v=6aa0fe7b76", "app/18.js?v=39a2080f46", "app/19.js?v=23b72cd9de", "app/20.js?v=839600cb25", "app/21.js?v=0d592f0dfb", "app/22.js?v=4576d29f1a", "app/23.js?v=52de543b57"];
+  var CHAVE = "estante-switch-v1-pacotes-fora", VELHA = "estante-switch-v1-pacotes";
+  var fora = [];
+  try {
+    // chave antiga = gêneros que a pessoa tinha baixado um por um (o resto não vinha por falta de clique, não por escolha):
+    // agora vem tudo, então a chave velha só é apagada
+    if (localStorage.getItem(VELHA) !== null) localStorage.removeItem(VELHA);
+    fora = JSON.parse(localStorage.getItem(CHAVE) || "[]");
+    if (!Array.isArray(fora)) fora = [];
+  } catch (e) { fora = []; }
+  fora = fora.filter(function (g) { return PAC[g]; });
+  var ativos = Object.keys(PAC).filter(function (g) { return fora.indexOf(g) < 0; });
   window.PACOTES = PAC;
-  window.PACOTES_INST = inst;
+  window.PACOTES_FORA = fora;
+  window.PACOTES_INST = ativos.slice();   // gêneros do catálogo que entram neste aparelho
   window.PACOTES_FALHOU = [];
-  // jogos do catálogo que você marcou e cujo gênero não está baixado: vêm do que ficou guardado
+  window.CAT_AO_CRESCER = [];   // os módulos que guardam um mapa dos jogos se inscrevem aqui pra saber dos que chegaram
+  window.CAT_CARREGANDO = ativos.length > 0;
+  // jogos do catálogo que você marcou: vêm já do que ficou guardado (aparecem marcados na hora, antes do catálogo chegar,
+  // e continuam aqui mesmo se o gênero for tirado)
   try {
     var gu = JSON.parse(localStorage.getItem("estante-switch-v1-guardados") || "{}") || {}, p = {gn: "guardados", data: [], ficha: {}, extra: {}};
     Object.keys(gu).forEach(function (id) {
       var o = gu[id];
-      if (!o || !o.g || inst.indexOf(o.g.gn) >= 0) return;
+      if (!o || !o.g) return;
       p.data.push(o.g);
       if (o.f) p.ficha[id] = o.f;
       if (o.x) p.extra[id] = o.x;
     });
     if (p.data.length) window.PAC = [p];
   } catch (e) {}
-  var lista = inst.map(function (g) { return "pacotes/" + g + ".js?v=" + PAC[g].v; }).concat(APP);
-  // baixa tudo em paralelo (preload) e roda um por vez, na ordem; se um falhar, tenta de novo até 4 vezes
-  lista.forEach(function (s) {
+  var urlPac = function (g) { return "pacotes/" + g + ".js?v=" + PAC[g].v; };
+  window.PACOTES_URL = urlPac;
+  // o app primeiro (prioridade alta)
+  APP.forEach(function (s) {
     var l = document.createElement("link");
     l.rel = "preload"; l.as = "script"; l.href = s;
     document.head.appendChild(l);
   });
-  function rodar(i, tent) {
-    if (i >= lista.length) return;
-    var s = lista[i], el = document.createElement("script");
-    el.src = tent ? s + (s.indexOf("?") < 0 ? "?" : "&") + "r=" + tent : s;
-    var acabou = false;
-    var relogio = setTimeout(function () { if (!acabou) el.onerror(); }, 12000);  // pendurado: tenta de novo
-    el.onload = function () { if (acabou) return; acabou = true; clearTimeout(relogio); rodar(i + 1, 0); };
-    el.onerror = function () {
-      if (acabou) return;
-      acabou = true; clearTimeout(relogio);
-      el.onload = el.onerror = null;
-      el.remove();
-      if (tent < 4) { setTimeout(function () { rodar(i, tent + 1); }, 400 * (tent + 1)); return; }
-      if (s.indexOf("pacotes/") === 0) { window.PACOTES_FALHOU.push(s.split("/")[1].split(".")[0]); rodar(i + 1, 0); return; }
-      var c = document.getElementById("carregando");
-      if (c) c.innerHTML = 'Não deu pra abrir. Confira a internet e <a href="">tente de novo</a>.';
-    };
-    document.body.appendChild(el);
+  // os pacotes só começam a baixar quando as suas listas já estão na tela (antes, atrasavam a abertura em ~0,5 s)
+  var pacPedidos = false;
+  function pedirPacotes() {
+    if (pacPedidos) return;
+    pacPedidos = true;
+    ativos.forEach(function (g) {
+      var l = document.createElement("link");
+      l.rel = "preload"; l.as = "script"; l.href = urlPac(g);
+      l.setAttribute("fetchpriority", "low");
+      document.head.appendChild(l);
+    });
   }
-  rodar(0, 0);
+  // um script; se der erro, tenta de novo até 4 vezes. Sem prazo que corte o download no meio:
+  // em internet lenta um arquivo grande demora, e recomeçar do zero só piora (aí só avisa que está demorando)
+  function umScript(s, ok, falhou) {
+    function vai(tent) {
+      var el = document.createElement("script");
+      el.src = tent ? s + (s.indexOf("?") < 0 ? "?" : "&") + "r=" + tent : s;
+      var acabou = false;
+      el.onload = function () { if (acabou) return; acabou = true; ok(); };
+      el.onerror = function () {
+        if (acabou) return;
+        acabou = true;
+        el.onload = el.onerror = null;
+        el.remove();
+        if (tent < 4) { setTimeout(function () { vai(tent + 1); }, 400 * (tent + 1)); return; }
+        falhou();
+      };
+      document.body.appendChild(el);
+    }
+    vai(0);
+  }
+  // o app: um por vez, na ordem
+  function rodarLista(lista, aoFalhar, aoFim) {
+    function rodar(i) {
+      if (i >= lista.length) { if (aoFim) aoFim(); return; }
+      umScript(lista[i], function () { rodar(i + 1); }, function () { if (aoFalhar(lista[i])) rodar(i + 1); });
+    }
+    rodar(0);
+  }
+  // os pacotes: todos ao mesmo tempo (a ordem não importa: cada um só se junta à fila window.PAC)
+  window.CAT_RODAR = function (lista, aoFalhar, aoFim, aoCada) {
+    var faltam = lista.length;
+    var um = function () { if (--faltam === 0 && aoFim) aoFim(); };
+    if (!faltam) { if (aoFim) aoFim(); return; }
+    lista.forEach(function (s, i) {
+      umScript(s, function () { if (aoCada) aoCada(i); um(); }, function () { aoFalhar(s); um(); });
+    });
+  };
+  // demorando pra abrir (internet lenta): avisa, sem cancelar nada
+  setTimeout(function () {
+    var c = document.getElementById("carregando");
+    if (c && c.textContent.indexOf("Não deu") < 0) c.textContent = "Abrindo a estante… a internet está lenta, mas continua chegando.";
+  }, 15000);
+  rodarLista(APP, function () {
+    var c = document.getElementById("carregando");
+    if (c) c.innerHTML = 'Não deu pra abrir. Confira a internet e <a href="">tente de novo</a>.';
+    return false;
+  }, function () {
+    // as suas listas já estão na tela: espera ela ser pintada e só então traz o catálogo
+    pedirPacotes();
+    var ir = function () { if (window.CAT_COMECAR) window.CAT_COMECAR(); else window.CAT_CARREGANDO = false; };
+    requestAnimationFrame(function () { setTimeout(ir, 30); });
+  });
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
     var tinha = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.register("sw.js").catch(function () {});
