@@ -722,7 +722,7 @@
   {id:"c0100fe9025c74", n:"Sora - Songs of the Stone", l:5, s:"cat", gn:"corrida", rom:"nc", h:0, g:3.7, e:0, img:"7f247f55bc6c4026472b92c4292cbf405fc8a656e241dbab86a94e956e6d55e9.jpg", t:"", et:"cz", si:"co.6"},
   {id:"c0100a00025c78", n:"Aery - Surreal World", l:5, s:"cat", gn:"corrida", rom:"nao", h:0, g:6.5, e:0, img:"adac1eb5ea2fbdd677837c3f4d8fc466d04abf4de4711e29002b665b4ab0f0b9.jpg", t:"", si:"hico.6"},
   {id:"c0100e34025d06", n:"Moto Championship 26", l:5, s:"cat", gn:"corrida", rom:"nao", h:0, g:0.4, e:0, img:"b8eb012140eaef25c5bb8bdac8c8b5b073f09eaba0e7d29eb3881d0ae4da94ef.jpg", t:"", si:"esco.40"},
-  {id:"c0100a67025d94", n:"City Bus Simulator", l:5, s:"cat", gn:"corrida", rom:"nao", h:0, g:1.5, e:0, img:"f6e7e2d20da0875cf6f9638c399ae9275a9d00a3e33810503b9d585ffaf7c003.jpg", t:"", si:"co.oj"},
+  {id:"c0100a67025d94", n:"City Bus Simulator (Burgeq Media Games)", l:5, s:"cat", gn:"corrida", rom:"nao", h:0, g:1.5, e:0, img:"f6e7e2d20da0875cf6f9638c399ae9275a9d00a3e33810503b9d585ffaf7c003.jpg", t:"", si:"co.oj"},
   {id:"c0100213025eb4", n:"Formula Racing Pro 2026", l:5, s:"pt", gn:"corrida", rom:"nao", h:0, g:1.2, e:0, img:"78a0760db2cf716ef0cb95d979312006d514c3d1bad293de206dfdcc7bd2aabb.jpg", t:"", si:"esco.1r"},
   {id:"c0100333025eea", n:"Formula Uno Racing", l:5, s:"cat", gn:"corrida", rom:"nao", h:0, g:0.4, e:0, img:"395c4c9107d47dbcec000ee0736c148a1bd40728658dfdd167cb5d0ee53b005e.jpg", t:"", si:"co.a"},
   {id:"c0100e54022748", n:"Car Guys", l:5, s:"cat", gn:"corrida", rom:"nao", h:0, g:0.3, e:0, img:"15850d235f9d7da8a8dc53cfe131418ba803ae3648b4ba55e769bca38f166cda.jpg", t:"", si:"acco"},

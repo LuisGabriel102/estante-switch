@@ -226,3 +226,25 @@
   posLista();
 })();
 
+/* 26/11 (2): o ✕ da ficha não fica mais por cima do texto: some ao rolar pra baixo lendo, volta ao rolar pra cima ou perto do topo */
+(function () {
+  "use strict";
+  var ficha = document.getElementById("ficha");
+  if (!ficha) return;
+  var st = document.createElement("style");
+  st.textContent = "#ficha .ficha-x{transition:opacity .18s ease, transform .18s ease}" +
+    "#ficha.x-some .ficha-x{opacity:0;transform:translateY(-14px) scale(.9);pointer-events:none}";
+  document.head.appendChild(st);
+  var ult = 0, desceu = 0;
+  ficha.addEventListener("scroll", function () {
+    var y = ficha.scrollTop, d = y - ult;
+    ult = y;
+    if (y < 80) { ficha.classList.remove("x-some"); desceu = 0; return; }
+    if (d > 0) { desceu += d; if (desceu > 24) ficha.classList.add("x-some"); }
+    else if (d < -6) { desceu = 0; ficha.classList.remove("x-some"); }
+  }, {passive: true});
+  // abriu outra ficha: o ✕ aparece de novo
+  new MutationObserver(function () { if (ficha.open) { ult = 0; desceu = 0; ficha.classList.remove("x-some"); } })
+    .observe(ficha, {attributes: true, attributeFilter: ["open"]});
+})();
+

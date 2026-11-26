@@ -154,7 +154,7 @@
   {id:"c01005ca027b28", n:"CASTAWAY SURVIVAL IN OCEAN - Build Your Own Raft, Craft", l:5, s:"cat", gn:"sobrevivencia", rom:"nao", h:0, g:0.4, e:0, img:"1e10e835f10fde512a862a4085705ed6ad2c8999a77d24d619dbb145af1f27d7.jpg", t:"", si:"fe.gm"},
   {id:"c0100033027d90", n:"28 Days Train Wreck Survivor", l:5, s:"cat", gn:"sobrevivencia", rom:"nao", h:0, g:0.9, e:0, img:"d6a9ae3e7809d762188f90465f85c5b3a4a11c1ba0e1f4cbc68265cf19df7073.jpg", t:"", si:"svti.1b"},
   {id:"c0100459027e42", n:"Titanic Survival Simulator", l:5, s:"cat", gn:"sobrevivencia", rom:"nao", h:0, g:1.6, e:0, img:"2893dc5979ce4683f3a27685d973750ee20af13b6ddf6d7ba4f830fa4cb375a3.jpg", t:"", si:"fe.2p"},
-  {id:"c01002bb028002", n:"Castaway", l:5, s:"pt", gn:"sobrevivencia", rom:"nao", h:0, g:0.2, e:0, img:"88669ba65a8534993f261caaf1a7431f8a7dec7f9ed7fc3d2c5baba36b5e0657.jpg", t:"", si:".30"},
+  {id:"c01002bb028002", n:"Castaway (Nerd Games)", l:5, s:"pt", gn:"sobrevivencia", rom:"nao", h:0, g:0.2, e:0, img:"88669ba65a8534993f261caaf1a7431f8a7dec7f9ed7fc3d2c5baba36b5e0657.jpg", t:"", si:".30"},
   {id:"c01002c6028114", n:"Survival Legion", l:5, s:"pt", gn:"sobrevivencia", rom:"nao", h:0, g:0.1, e:0, img:"a00fdc127561b03373ac42b4f4b1436dcc7ac90be6c975e1151de8b94e4e8f4d.jpg", t:"", si:"tagrlu.d5"},
   {id:"c010069d02827a", n:"Sweet Land Survival", l:5, s:"cat", gn:"sobrevivencia", rom:"nao", h:0, g:0.3, e:0, img:"cacebdcff94f94fe2f889536d93db7e759b8820a4b85f30a6f220b007130139f.jpg", t:"", si:"gr.bi"},
   {id:"c01001960283f0", n:"WinterCraft: Survival in the Forest", l:5, s:"pt", gn:"sobrevivencia", rom:"nao", h:0, g:0.2, e:0, img:"0ef1d9a046c9b28499e161970101f8887936de4f88809a36ba2a57733fa0274c.jpg", t:"", si:".hq"},

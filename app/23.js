@@ -327,13 +327,19 @@
       // 4 = palavra igual no nome; 3 = começo de palavra no nome, ou a tradução; 2 = parecida; 1 = só na descrição/selo/gênero
       l = MN.get(t); if (l) { marcar(mk, l, 4); s.temNome = true; }
       for (j = inicio(VN, t); j < VN.length && VN[j].indexOf(t) === 0; j++) if (VN[j] !== t) { marcar(mk, MN.get(VN[j]), 3); s.temNome = true; }
+      // 26/11: quem só bate pela TRADUÇÃO no nome (fazenda -> "Farm") e quem bate no texto em português ficam anotados à parte,
+      // pra que os jogos de fazenda das suas listas venham antes de um "Farm" qualquer do catálogo
+      var proprio = new Uint8Array(n), tr = s.tr = new Uint8Array(n), tx = s.tx = new Uint8Array(n);
+      if (l) marcar(proprio, l, 1);
+      for (j = inicio(VN, t); j < VN.length && VN[j].indexOf(t) === 0; j++) marcar(proprio, MN.get(VN[j]), 1);
       s.alt.forEach(function (a) {
-        l = MN.get(a); if (l) { marcar(mk, l, 3); s.temNome = true; }
-        if (a.length >= 4) for (var jj = inicio(VN, a); jj < VN.length && VN[jj].indexOf(a) === 0; jj++) { marcar(mk, MN.get(VN[jj]), 3); s.temNome = true; }
+        l = MN.get(a); if (l) { marcar(mk, l, 3); marcar(tr, l, 1); s.temNome = true; }
+        if (a.length >= 4) for (var jj = inicio(VN, a); jj < VN.length && VN[jj].indexOf(a) === 0; jj++) { marcar(mk, MN.get(VN[jj]), 3); marcar(tr, MN.get(VN[jj]), 1); s.temNome = true; }
       });
+      for (j = 0; j < n; j++) if (proprio[j]) tr[j] = 0;
       [t].concat(s.alt).forEach(function (a) {
         if (a.length < 3 || s.num) return;
-        var _t = performance.now(); var h = textoAcha(a); if (h) marcar(mk, h, 1); PERF.texto += performance.now() - _t;
+        var _t = performance.now(); var h = textoAcha(a); if (h) { marcar(mk, h, 1); marcar(tx, h, 1); } PERF.texto += performance.now() - _t;
       });
     });
     PERF.marcas = performance.now() - PERF.t0;
@@ -387,6 +393,11 @@
           if (nv > nivel) nivel = nv;
         }
       }
+      // só pela tradução no nome: abaixo do achado pelo texto em português (350), a não ser que o texto também bata
+      // (só quando TODAS as palavras bateram pela tradução: "dragao quest" continua achando Dragon Quest no topo)
+      var soTr = true, comTx = true;
+      for (j = 0; j < req.length; j++) { if (!(req[j].tr && req[j].tr[i])) { soTr = false; break; } if (!req[j].tx[i]) comTx = false; }
+      if (soTr && nivel >= 300) nivel = comTx ? 400 : 340;
       var g = REF[i];
       var bonus = (g.l !== 5 ? 50 : 0) + (fav.has(g.id) ? 30 : 0) + (sel.has(g.id) ? 20 : 0);
       var fino = 5 * exatas / req.length + 4.9 * Math.min(1, qlen / Math.max(1, (a && a.length < f.length ? a : f).length));
