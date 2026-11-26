@@ -1,554 +1,1109 @@
-/* mod_F_busca.js */
-// 26/11: busca que entende erro de digitação, falta de acento, sigla, algarismo romano e palavra em português.
-// Fica por ÚLTIMO. Troca três coisas do app (sem mexer no 01.js):
-//  1. window.B_ok (era do mod_B_decidir): agora consulta um índice montado uma vez (e refeito quando o DATA cresce).
-//  2. sorted: com busca ativa, reordena por relevância — nome exato > começa com > frase no nome > todas as palavras
-//     > descrição/selo/gênero > parecido; no mesmo nível, os das suas listas, com estrela e marcados primeiro;
-//     depois vale a ordem escolhida no app.
-//  3. renderList: enquanto você digita, espera 120 ms entre as teclas; põe no alto a fileira "Mais perto do que você
-//     buscou" e, quando só acha parecidos (ou nada), o "Você quis dizer…?".
-// Para outro módulo avisar que o DATA mudou: window.F_busca.reindexar() ou window.dispatchEvent(new Event("estante-dados")).
-// (Além disso, a cada busca e a cada 3 s ele confere sozinho se o DATA cresceu.)
+/* mod_L_navegar.js */
+// 26/11 (agL): navegação em CATÁLOGO, como app de loja no celular.
+//  - Tela inicial em prateleiras (fileiras de capas): Continuar, Seus interesses, Mais a sua cara, Joias escondidas,
+//    Suas traduções, suas playlists e uma por gênero. Cada prateleira tem "Ver tudo ›", que abre o catálogo dela.
+//  - Catálogo: tela própria em grade de capas, com título, contagem, ordem (Mais a sua cara / Nota / Nome / Mais novos),
+//    os filtros ligados em chips (tocar tira) e "carregar mais" sozinho ao rolar. O voltar do celular volta (history).
+//  - Gênero direto: tocar num gênero (prateleira, menu do alto da lista, seletor antigo, gênero escrito na ficha)
+//    abre o catálogo daquele gênero, rolado pro topo.
+//  - Filtros numa folha só (de baixo no celular, painel do lado no PC), com seções curtas e "Mostrar N jogos".
+//    Por baixo, mexe no MESMO state de sempre (state.genre, state.rom, state.idioma, state.size, state.dur, os chips do
+//    mod_B, as etiquetas do mod_Q, o "Só as joias" do mod_J): busca, sessão, sincronizar e "Mais a sua cara" continuam iguais.
+//  - A lista antiga continua na aba "☰ Lista completa". Enquanto o catálogo está na tela, a lista antiga não é
+//    redesenhada (custava ~0,8 s no celular a cada filtro); ela é refeita na hora em que você abre a aba.
+// Fica antes do mod_F_busca.js (a busca embrulha o renderList daqui). Ganchos pra outros módulos e testes: window.L_nav,
+// window.L_IDS() (a ordem dos jogos da tela atual, pras setas da ficha do mod_B2; ver montar_app.py).
 (function () {
   "use strict";
-  var ESPERA = 120;
+  var H = document.documentElement;
+  if (typeof DATA === "undefined" || typeof state === "undefined" || typeof renderList !== "function") { H.classList.remove("l-on"); return; }
+  H.classList.add("l-on");
 
-  // ---------- normalização ----------
-  var ALIAS = {
-    ff: "final fantasy", dq: "dragon quest", p5: "persona 5", p5r: "persona 5 royal", p5s: "persona 5 strikers", p5t: "persona 5 tactica",
-    p4: "persona 4", p4g: "persona 4 golden", p3: "persona 3", p3r: "persona 3 reload", p3p: "persona 3 portable",
-    botw: "zelda breath of the wild", totk: "zelda tears of the kingdom", loz: "zelda", xc: "xenoblade chronicles", xcde: "xenoblade chronicles definitive edition",
-    smt: "shin megami tensei", mh: "monster hunter", mhr: "monster hunter rise", fe: "fire emblem", feth: "fire emblem three houses", rf: "rune factory",
-    ac: "animal crossing", acnh: "animal crossing new horizons", mk8: "mario kart 8", mk8d: "mario kart 8 deluxe", ssbu: "super smash bros ultimate",
-    smash: "super smash bros", dkc: "donkey kong country", kh: "kingdom hearts", tw: "the witcher", nier: "nier", sf: "street fighter", mk: "mortal kombat",
-    re: "resident evil", dmc: "devil may cry", dbz: "dragon ball z", ys: "ys", sao: "sword art online", bg: "baldurs gate", bg3: "baldurs gate 3",
-    sdv: "stardew valley", hk: "hollow knight", ori: "ori", ot: "octopath traveler", ot2: "octopath traveler 2", tom: "tale of immortal"
-  };
-  // português -> inglês (só como alternativa: a palavra digitada continua valendo)
-  var PT = {
-    dragao: "dragon", dragoes: "dragons dragon", cavaleiro: "knight", cavaleiros: "knights knight", lenda: "legend", lendas: "legends legend",
-    guerra: "war", guerras: "wars", estrela: "star", estrelas: "stars star", espada: "sword", espadas: "swords", escudo: "shield", fantasia: "fantasy",
-    sombra: "shadow", sombras: "shadows", mundo: "world", ilha: "island", cidade: "city town", princesa: "princess", reino: "kingdom", reinos: "kingdoms",
-    monstro: "monster", monstros: "monsters", cacador: "hunter", cacadores: "hunters", corrida: "racing race", corridas: "racing", futebol: "soccer football",
-    zumbi: "zombie", zumbis: "zombies", pesca: "fishing fish", pescaria: "fishing", cozinha: "cooking", cozinhar: "cooking cook", vida: "life",
-    historia: "story", misterio: "mystery", terror: "horror", luta: "fight fighting", lutas: "fighting", lutador: "fighter", lutadores: "fighters",
-    deus: "god", deuses: "gods", demonio: "demon", demonios: "demons", fogo: "fire", gelo: "ice", noite: "night", sangue: "blood", alma: "soul",
-    almas: "souls", fazenda: "farm farming", fazendas: "farm farms", masmorra: "dungeon", masmorras: "dungeons dungeon", tesouro: "treasure",
-    pirata: "pirate", piratas: "pirates", guerreiro: "warrior", guerreiros: "warriors", bruxa: "witch", bruxas: "witches", magia: "magic", mago: "wizard mage",
-    heroi: "hero", herois: "heroes", aventura: "adventure", aventuras: "adventures", jornada: "journey", cavalo: "horse", gato: "cat", gatos: "cats",
-    cachorro: "dog", robo: "robot", robos: "robots", espaco: "space", tempo: "time", morte: "death", inferno: "hell", oceano: "ocean", floresta: "forest",
-    montanha: "mountain", castelo: "castle", torre: "tower", escola: "school", amor: "love", coracao: "heart", sonho: "dream", sonhos: "dreams",
-    pesadelo: "nightmare", fantasma: "ghost", fantasmas: "ghosts", ultimo: "last", ultima: "last", mestre: "master", batalha: "battle", batalhas: "battles",
-    tiro: "shooter", carro: "car", carros: "cars", tanque: "tank", aviao: "plane", trem: "train", caverna: "cave", cavernas: "caves", ruinas: "ruins",
-    planta: "plant", plantas: "plants", jardim: "garden", oficina: "workshop", loja: "shop", vampiro: "vampire", vampiros: "vampires", lobo: "wolf",
-    e: "and"
-  };
-  var STOP = {the: 1, of: 1, a: 1, an: 1, and: 1, e: 1, de: 1, do: 1, da: 1, dos: 1, das: 1, o: 1, os: 1, as: 1, um: 1, uma: 1, no: 1, na: 1, to: 1, in: 1,
-    jogo: 1, jogos: 1, game: 1, games: 1};
-  var ROMANO = /^(x{0,3})(ix|iv|v?i{0,3})$/;
-  var RV = {"": 0, i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9};
-  function romano(t) {
-    var m = ROMANO.exec(t);
-    if (!m || !t) return t;
-    return String(m[1].length * 10 + RV[m[2]]);
-  }
-  function base(s) {
-    return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
-      .replace(/[™®©]/g, " ").replace(/&/g, " and ").replace(/['’‘`´]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
-  }
-  // letra|número separados ("ff7" -> "ff 7"), romano -> algarismo ("vii" -> "7")
-  function toks(s) {
-    var b = base(s);
-    if (!b) return [];
-    var out = [], p = b.replace(/([a-z])(\d)/g, "$1 $2").replace(/(\d)([a-z])/g, "$1 $2").split(" ");
-    for (var i = 0; i < p.length; i++) if (p[i]) out.push(romano(p[i]));
-    return out;
-  }
-  // sigla no começo de uma palavra digitada: "ff7", "ffvii", "dq11", "xc2", "p5r"
-  function siglas(b) {
-    return b.split(" ").map(function (t) {
-      if (ALIAS[t]) return ALIAS[t];
-      var m = /^([a-z]+)(\d+)$/.exec(t);
-      if (m && ALIAS[m[1]]) return ALIAS[m[1]] + " " + m[2];
-      for (var k = 2; k < t.length; k++) {
-        var a = t.slice(0, k), r = t.slice(k);
-        if (ALIAS[a] && ROMANO.test(r)) return ALIAS[a] + " " + r;
-      }
-      return t;
-    }).join(" ");
-  }
-  function nomeForma(n) { return toks(n).join(" "); }
-  function altForma(f) {
-    var a = f.replace(/^the legend of zelda\b/, "zelda").replace(/\bthe legend of zelda\b/, "zelda");
-    if (a.indexOf("the ") === 0) a = a.slice(4);
-    return a;
-  }
+  var PASSO = 24;            // capas por vez no catálogo
+  var PRAT_INI = 12;         // capas de cada prateleira ao aparecer
+  var PRAT_MAX = 48;         // até quantas a prateleira cresce ao deslizar (o resto é no "Ver tudo")
+  var KO = KEY + "-L-ordem", KN = KEY + "-L-nota";
+  function ler(k, p) { try { var v = JSON.parse(localStorage.getItem(k) || "null"); return v == null ? p : v; } catch (e) { return p; } }
+  function gravar(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function $(id) { return document.getElementById(id); }
+  function mil(n) { return Number(n).toLocaleString("pt-BR"); }
+  function jogos(n) { return mil(n) + (n === 1 ? " jogo" : " jogos"); }
+  function reduz() { return !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches); }
+  var T = window.L_TEMPOS = {};
 
-  // ---------- índice ----------
-  var REF = [], NF = [], NA = [], ID2I = new Map();
-  var MN = new Map();                          // palavra do nome -> lista de jogos
-  var VN = [], VNm = null, vocabOk = false;
-  var N = 0, montando = false;
-  // texto (selo, descrição, gênero, romance): um textão só, achado com indexOf; OFF = onde começa cada jogo
-  var TXP = [], TXN = 0, TX = "", OFF = null, txOk = false, TH = new Map();
-  // depois, também em segundo plano: palavra do texto -> jogos (aí a busca no texto fica instantânea)
-  var MT = new Map(), VT = [], TWN = 0, twOk = false;
-  var EST = {nomesMs: 0, textoMs: 0, ordenarMs: 0, jogos: 0, comTexto: 0, palavrasNome: 0, letrasTexto: 0, pronto: false,
-    buscas: 0, ultMs: 0, maxMs: 0, somaMs: 0, refeito: 0, montagens: 0};
-  function poe(w, i) {
-    var l = MN.get(w);
-    if (!l) MN.set(w, [i]); else if (l[l.length - 1] !== i) l.push(i);
-  }
-  function indexarNome(i) {
-    var g = DATA[i];
-    REF[i] = g; ID2I.set(g.id, i);
-    var f = nomeForma(g.n || ""), a = altForma(f);
-    NF[i] = f; NA[i] = a !== f ? a : null;
-    var ws = f.split(" "), k;
-    for (k = 0; k < ws.length; k++) if (ws[k]) poe(ws[k], i);
-    if (NA[i]) { ws = NA[i].split(" "); for (k = 0; k < ws.length; k++) if (ws[k]) poe(ws[k], i); }
-  }
-  function textoDe(g) {
-    var fi = (typeof FICHA !== "undefined" && FICHA[g.id]) || null, gl = (typeof GENRES !== "undefined" && GENRES[g.gn]) || null;
-    return (g.t || "") + " " + (fi && fi.d ? fi.d : "") + " " + (gl ? gl.label : "") + (g.rom === "sim" || g.rom === "opc" ? " romance namoro" : "");
-  }
-  function textoPasso(lim) {
-    var ate = Math.min(N, TXN + lim), arr = [], i;
-    for (i = TXN; i < ate; i++) arr.push(textoDe(REF[i]));
-    var r = arr.join("\u0001").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
-      .replace(/['’‘`´]/g, "").replace(/[^a-z0-9\u0001]+/g, " ").split("\u0001");
-    for (i = 0; i < r.length; i++) TXP[TXN + i] = r[i];
-    TXN = ate;
-    if (TXN === N) juntarTexto();
-  }
-  function juntarTexto() {
-    var off = new Int32Array(N + 1), partes = new Array(N), pos = 0;
-    for (var i = 0; i < N; i++) { off[i] = pos; var s = " " + TXP[i] + " \u0001"; partes[i] = s; pos += s.length; }
-    off[N] = pos; TX = partes.join(""); OFF = off; txOk = true; TH.clear(); VER++;
-    EST.comTexto = N; EST.letrasTexto = pos;
-  }
-  // jogos cujo texto tem uma palavra que começa com w
-  function textoAcha(w) {
-    if (w.length < 3) return null;
-    var c = TH.get(w);
-    if (c) return c;
-    if (twOk) {
-      c = [];
-      for (var j = inicio(VT, w); j < VT.length && VT[j].indexOf(w) === 0; j++) c.push(MT.get(VT[j]));
-      c = c.length === 1 ? c[0] : [].concat.apply([], c);
-      if (TH.size > 300) TH.clear();
-      TH.set(w, c);
-      return c;
-    }
-    if (!txOk) return null;
-    var out = [], ag = " " + w, nt = OFF.length - 1, lo = 0, p = TX.indexOf(ag);
-    while (p >= 0) {
-      var a = lo, b = nt;
-      while (b - a > 1) { var m = (a + b) >> 1; if (OFF[m] <= p) a = m; else b = m; }
-      out.push(a); lo = a;
-      if (a + 1 >= nt) break;
-      p = TX.indexOf(ag, OFF[a + 1]);
-    }
-    if (TH.size > 300) TH.clear();
-    TH.set(w, out);
-    return out;
-  }
-  function palavrasPasso(lim) {
-    var ate = Math.min(TXN, TWN + lim);
-    for (var i = TWN; i < ate; i++) {
-      var ws = TXP[i].split(" ");
-      for (var k = 0; k < ws.length; k++) {
-        var w = ws[k];
-        if (w.length < 3 || w.length > 24 || STOP[w]) continue;
-        var l = MT.get(w);
-        if (!l) MT.set(w, [i]); else if (l[l.length - 1] !== i) l.push(i);
-      }
-    }
-    TWN = ate; twOk = false;
-    if (TWN === N) { VT = Array.from(MT.keys()).sort(); twOk = true; TH.clear(); EST.palavrasTexto = VT.length; VER++; }
-  }
-  function mascara(s) {
-    var m = 0;
-    for (var i = 0; i < s.length; i++) { var c = s.charCodeAt(i); m |= c >= 97 ? 1 << (c - 97) : 1 << 26 + (c % 5); }
-    return m;
-  }
-  function ordenar() {
-    var t0 = performance.now();
-    VN = Array.from(MN.keys()).sort();
-    VNm = new Int32Array(VN.length);
-    for (var i = 0; i < VN.length; i++) VNm[i] = mascara(VN[i]);
-    vocabOk = true; FZ.clear(); VER++;
-    EST.ordenarMs = Math.round(performance.now() - t0);
-    EST.palavrasNome = VN.length;
-  }
-  function trocou() { return DATA.length < N || (N > 0 && (DATA[N - 1] !== REF[N - 1] || DATA[0] !== REF[0])); }
-  function mudou() { return DATA.length !== N || trocou(); }
-  function zerar() {
-    REF = []; NF = []; NA = []; ID2I = new Map(); MN = new Map(); N = 0; vocabOk = false; VN = []; VNm = null; VER++;
-    TXP = []; TXN = 0; TX = ""; OFF = null; txOk = false; TH.clear(); MT = new Map(); VT = []; TWN = 0; twOk = false;
-    EST.nomesMs = 0; EST.textoMs = 0; EST.refeito++;
-  }
-  // (só pros testes) termina os nomes agora; o texto segue em segundo plano
-  function garantir() {
-    if (mudou()) {
-      if (trocou()) zerar();
-      var t0 = performance.now();
-      while (N < DATA.length) indexarNome(N++);
-      EST.nomesMs += performance.now() - t0;
-      vocabOk = false;
-      montarAosPoucos();
-    }
-    if (!vocabOk) ordenar();
-    EST.jogos = N;
-  }
-  function montarAosPoucos() {
-    if (montando) return;
-    if (!mudou() && vocabOk && TXN === N && twOk) return;
-    montando = true; EST.pronto = false; EST.montagens++;
-    if (trocou()) zerar();
-    (function passo() {
-      var t0 = performance.now();
-      if (N < DATA.length) {
-        while (N < DATA.length && performance.now() - t0 < 14) indexarNome(N++);
-        EST.nomesMs += performance.now() - t0;
-        vocabOk = false;
-        setTimeout(passo, 0); return;
-      }
-      if (!vocabOk) { ordenar(); if (state.q.trim()) renderList(); setTimeout(passo, 0); return; }   // nomes prontos: refaz a busca que estava na tela
-      if (TXN < N) {
-        textoPasso(700);
-        EST.textoMs += performance.now() - t0;
-        if (TXN === N && state.q.trim()) renderList();   // agora a busca também olha a descrição
-        setTimeout(passo, 0); return;
-      }
-      if (!twOk) {
-        while (TWN < N && performance.now() - t0 < 14) palavrasPasso(150);
-        if (TWN === N && !twOk) palavrasPasso(0);
-        EST.palavrasMs = (EST.palavrasMs || 0) + performance.now() - t0;
-        setTimeout(passo, 0); return;
-      }
-      EST.nomesMs = Math.round(EST.nomesMs); EST.textoMs = Math.round(EST.textoMs); EST.palavrasMs = Math.round(EST.palavrasMs || 0);
-      EST.jogos = N; EST.pronto = true; montando = false;
-      if (mudou()) montarAosPoucos();
-    })();
-  }
-
-  // ---------- palavra parecida (Damerau/OSA com limite) ----------
-  var R0 = new Int32Array(80), R1 = new Int32Array(80), R2 = new Int32Array(80);
-  function osa(a, b, k, pref) {
-    var la = a.length, lb = b.length;
-    if (pref) { if (lb > la + k) lb = la + k; } else if (Math.abs(la - lb) > k) return k + 1;
-    if (la > 70 || lb > 70) return k + 1;
-    var pp = R0, p = R1, c = R2, i, j, t;
-    for (j = 0; j <= lb; j++) p[j] = j;
-    for (i = 1; i <= la; i++) {
-      c[0] = i; var mn = i, ai = a.charCodeAt(i - 1);
-      for (j = 1; j <= lb; j++) {
-        var bj = b.charCodeAt(j - 1), v = p[j - 1] + (ai === bj ? 0 : 1), x = p[j] + 1;
-        if (x < v) v = x;
-        x = c[j - 1] + 1; if (x < v) v = x;
-        if (i > 1 && j > 1 && ai === b.charCodeAt(j - 2) && a.charCodeAt(i - 2) === bj) { x = pp[j - 2] + 1; if (x < v) v = x; }
-        c[j] = v; if (v < mn) mn = v;
-      }
-      if (mn > k) return k + 1;
-      t = pp; pp = p; p = c; c = t;
-    }
-    if (!pref) return p[lb];
-    var best = k + 1;   // começo da palavra: o melhor entre os prefixos de tamanho la-k .. la+k
-    for (j = Math.max(1, la - k); j <= lb; j++) if (p[j] < best) best = p[j];
-    return best;
-  }
-  function popc(x) { x -= (x >>> 1) & 0x55555555; x = (x & 0x33333333) + ((x >>> 2) & 0x33333333); return (((x + (x >>> 4)) & 0x0F0F0F0F) * 0x01010101) >>> 24; }
-  function limite(t) { return /^\d+$/.test(t) ? 0 : t.length >= 8 ? 2 : t.length >= 4 ? 1 : 0; }
-  var FZ = new Map();
-  // palavras do nome a até k letras de diferença; pref = também vale o começo de palavra (a palavra que está sendo digitada)
-  function parecidas(t, k, pref) {
-    var ch = t + "|" + k + "|" + (pref ? 1 : 0);
-    if (FZ.has(ch)) return FZ.get(ch);
-    var out = [], lt = t.length, mt = mascara(t), c0 = t.charCodeAt(0), c1 = t.charCodeAt(1);
-    for (var i = 0; i < VN.length; i++) {
-      var w = VN[i], lw = w.length, d;
-      if (w === t) continue;
-      if (Math.abs(lw - lt) <= k && popc(mt ^ VNm[i]) <= 2 * k) {
-        d = osa(t, w, k, false);
-        if (d <= k) { out.push([w, d]); continue; }
-      }
-      if (pref && lt >= 5 && lw > lt) {
-        var w0 = w.charCodeAt(0);
-        if (w0 !== c0 && w.charCodeAt(1) !== c1 && w0 !== c1 && w.charCodeAt(1) !== c0 && w.charCodeAt(2) !== c0 && w0 !== t.charCodeAt(2)) continue;
-        d = osa(t, w, k, true);
-        if (d <= k) out.push([w, d + 0.5]);
-      }
-    }
-    if (FZ.size > 400) FZ.clear();
-    FZ.set(ch, out);
-    return out;
-  }
-  function inicio(V, t) {
-    var lo = 0, hi = V.length;
-    while (lo < hi) { var m = (lo + hi) >> 1; if (V[m] < t) lo = m + 1; else hi = m; }
-    return lo;
-  }
-
-  // ---------- a busca ----------
-  var VER = 0, chave = null, PRONTA = false, SC = new Float32Array(0), MELHOR = 0 /* melhor nível achado */, SUG = "", TOPF = 0;
-  function variantes(q) {
-    var b = base(q), s = siglas(b), out = [toks(s)];
-    if (s !== b) out.push(toks(b));
-    return out.filter(function (v) { return v.length; });
-  }
-  function frases(tk) {
-    var fs = [[]];
-    tk.forEach(function (t) {
-      var alt = [t];
-      if (PT[t] && (t.length >= 4 || t === "e")) alt = alt.concat(PT[t].split(" "));
-      var nv = [];
-      fs.forEach(function (f) { alt.forEach(function (a, k) { if (nv.length < 6) { var x = f.concat(a); x.tr = f.tr || k > 0; nv.push(x); } }); });
-      fs = nv;
-    });
-    return fs.map(function (f) { return {p: f.join(" "), tr: !!f.tr}; });
-  }
-  function marcar(mk, lista, v) {
-    for (var j = 0; j < lista.length; j++) { var i = lista[j]; if (mk[i] < v) mk[i] = v; }
-  }
-  var PERF = {};
-  function avaliar(tk, sc, ehPrimeira) {
-    PERF = {t0: performance.now(), texto: 0};
-    var slots = tk.map(function (t, k) {
-      var alt = [];
-      if (PT[t] && t.length >= 4) alt = PT[t].split(" ");
-      return {t: t, alt: alt, stop: !!STOP[t] && tk.length > 1, num: /^\d+$/.test(t), ult: k === tk.length - 1, temNome: false, mk: null};
-    });
-    var req = slots.filter(function (s) { return !s.stop; });
-    if (!req.length) req = slots;
-    var n = N, i, j, s, l;
-    req.forEach(function (s) {
-      var mk = s.mk = new Uint8Array(n), t = s.t;
-      // 4 = palavra igual no nome; 3 = começo de palavra no nome, ou a tradução; 2 = parecida; 1 = só na descrição/selo/gênero
-      l = MN.get(t); if (l) { marcar(mk, l, 4); s.temNome = true; }
-      for (j = inicio(VN, t); j < VN.length && VN[j].indexOf(t) === 0; j++) if (VN[j] !== t) { marcar(mk, MN.get(VN[j]), 3); s.temNome = true; }
-      // 26/11: quem só bate pela TRADUÇÃO no nome (fazenda -> "Farm") e quem bate no texto em português ficam anotados à parte,
-      // pra que os jogos de fazenda das suas listas venham antes de um "Farm" qualquer do catálogo
-      var proprio = new Uint8Array(n), tr = s.tr = new Uint8Array(n), tx = s.tx = new Uint8Array(n);
-      if (l) marcar(proprio, l, 1);
-      for (j = inicio(VN, t); j < VN.length && VN[j].indexOf(t) === 0; j++) marcar(proprio, MN.get(VN[j]), 1);
-      s.alt.forEach(function (a) {
-        l = MN.get(a); if (l) { marcar(mk, l, 3); marcar(tr, l, 1); s.temNome = true; }
-        if (a.length >= 4) for (var jj = inicio(VN, a); jj < VN.length && VN[jj].indexOf(a) === 0; jj++) { marcar(mk, MN.get(VN[jj]), 3); marcar(tr, MN.get(VN[jj]), 1); s.temNome = true; }
-      });
-      for (j = 0; j < n; j++) if (proprio[j]) tr[j] = 0;
-      [t].concat(s.alt).forEach(function (a) {
-        if (a.length < 3 || s.num) return;
-        var _t = performance.now(); var h = textoAcha(a); if (h) { marcar(mk, h, 1); marcar(tx, h, 1); } PERF.texto += performance.now() - _t;
-      });
-    });
-    PERF.marcas = performance.now() - PERF.t0;
-    // poucos achados pelo nome? então procura as palavras parecidas
-    var noNome = 0;
-    for (i = 0; i < n && noNome < 8; i++) {
-      for (j = 0; j < req.length; j++) if (req[j].mk[i] < 3) break;
-      if (j === req.length) noNome++;
-    }
-    var corr = null;
-    if (noNome < 8) {
-      corr = [];
-      req.forEach(function (s) {
-        var k = limite(s.t), melhor = null;
-        if (!k) { corr.push(s.t); return; }
-        var ps = parecidas(s.t, k, s.ult);
-        ps.forEach(function (p) {
-          marcar(s.mk, MN.get(p[0]), 2);
-          var f = MN.get(p[0]).length;
-          if (!melhor || p[1] < melhor[1] || (p[1] === melhor[1] && f > melhor[2])) melhor = [p[0], p[1], f];
-        });
-        // nada parecido nem com o limite normal: pra sugestão, tenta uma letra a mais
-        if (!melhor && !s.temNome && s.t.length >= 4) {
-          parecidas(s.t, k + 1, false).forEach(function (p) {
-            var f = MN.get(p[0]).length;
-            if (!melhor || p[1] < melhor[1] || (p[1] === melhor[1] && f > melhor[2])) melhor = [p[0], p[1], f];
-          });
-        }
-        corr.push(s.temNome || !melhor ? s.t : melhor[0]);
-      });
-    }
-    PERF.fuzzy = performance.now() - PERF.t0 - PERF.marcas;
-    var fs = frases(tk), ultNum = /\d$/.test(fs[0].p), qlen = fs[0].p.length;
-    var fav = state.fav, sel = state.sel;
-    for (i = 0; i < n; i++) {
-      var mn = 9, exatas = 0, temTxt = false, temPar = false;
-      for (j = 0; j < req.length; j++) {
-        var v = req[j].mk[i];
-        if (!v) { mn = 0; break; }
-        if (v < mn) mn = v;
-        if (v === 4) exatas++; else if (v === 2) temPar = true; else if (v === 1) temTxt = true;
-      }
-      if (!mn) continue;
-      var nivel = !temTxt && !temPar ? 500 : !temPar ? 350 : !temTxt ? 300 : 250;
-      var f = NF[i], a = NA[i];
-      if (nivel === 500) {
-        for (j = 0; j < fs.length; j++) {
-          var nv = nivelFrase(f, fs[j].p, ultNum);
-          if (a) { var na = nivelFrase(a, fs[j].p, ultNum); if (na > nv) nv = na; }
-          if (nv && fs[j].tr) nv -= 100;     // achou pela tradução (dragao -> dragon): um degrau abaixo do nome digitado
-          if (nv > nivel) nivel = nv;
-        }
-      }
-      // só pela tradução no nome: abaixo do achado pelo texto em português (350), a não ser que o texto também bata
-      // (só quando TODAS as palavras bateram pela tradução: "dragao quest" continua achando Dragon Quest no topo)
-      var soTr = true, comTx = true;
-      for (j = 0; j < req.length; j++) { if (!(req[j].tr && req[j].tr[i])) { soTr = false; break; } if (!req[j].tx[i]) comTx = false; }
-      if (soTr && nivel >= 300) nivel = comTx ? 400 : 340;
-      var g = REF[i];
-      var bonus = (g.l !== 5 ? 50 : 0) + (fav.has(g.id) ? 30 : 0) + (sel.has(g.id) ? 20 : 0);
-      var fino = 5 * exatas / req.length + 4.9 * Math.min(1, qlen / Math.max(1, (a && a.length < f.length ? a : f).length));
-      var nota = nivel + bonus + fino;
-      if (nivel > MELHOR) MELHOR = nivel;
-      if (nota > sc[i]) sc[i] = nota;
-    }
-    PERF.laco = performance.now() - PERF.t0 - PERF.marcas - PERF.fuzzy;
-    if (ehPrimeira && corr) {
-      var sug = corr.join(" ");
-      if (sug !== req.map(function (s) { return s.t; }).join(" ")) SUG = sug;
-    }
-  }
-  function nivelFrase(f, p, ultNum) {
-    if (f === p) return 1000;
-    if (f.indexOf(p) === 0 && (f.length === p.length || f.charCodeAt(p.length) === 32 || !ultNum)) return 800;
-    var k = (" " + f).indexOf(" " + p);
-    if (k >= 0 && (!ultNum || k + p.length >= f.length || f.charCodeAt(k + p.length) === 32)) return 650;
-    return 0;
-  }
-  function prep(q) {
-    q = String(q || "").trim();
-    if (trocou()) zerar();
-    if (mudou() || !vocabOk) montarAosPoucos();      // nunca trava: o que falta é montado em segundo plano
-    var k = q + "" + N + "" + VER;
-    if (k === chave) return;
-    chave = k;
-    var t0 = performance.now();
-    if (SC.length !== N) SC = new Float32Array(N); else SC.fill(0);
-    SUG = ""; MELHOR = 0; TOPF = 0;
-    PRONTA = VN.length > 0;                           // ainda sem índice (app acabou de abrir): vale o "contém" antigo
-    if (!PRONTA) return;
-    var vs = variantes(q);
-    vs.forEach(function (v, k) { avaliar(v, SC, k === 0); });
-    for (var i = 0; i < N; i++) if (SC[i]) TOPF++;
-    if (MELHOR >= 350) SUG = "";
-    var ms = performance.now() - t0;
-    EST.buscas++; EST.ultMs = Math.round(ms * 10) / 10; EST.somaMs += ms; if (ms > EST.maxMs) EST.maxMs = Math.round(ms * 10) / 10;
-  }
-  function nota(g) { var i = ID2I.get(g.id); return i === undefined || i >= SC.length ? 0 : SC[i]; }
-
-  // ---------- troca 1: B_ok ----------
-  var coleta = null;
-  window.B_ok = function (g, q) {
-    prep(q);
-    var i = ID2I.get(g.id), ok = PRONTA && i !== undefined && i < SC.length ? SC[i] > 0 : norm(g.n).indexOf(q) >= 0;
-    if (ok && coleta) coleta.push(g);
-    return ok;
-  };
-
-  // ---------- troca 2: ordem por relevância ----------
-  var sortedAntF = sorted;
-  sorted = function (arr) {
-    var r = sortedAntF.apply(this, arguments);
-    if (!state.q.trim() || !r || r.length < 2) return r;
-    prep(norm(state.q.trim()));
-    var d = new Array(r.length), k;
-    for (k = 0; k < r.length; k++) d[k] = [nota(r[k]), k, r[k]];
-    d.sort(function (a, b) { return (b[0] - a[0]) || (a[1] - b[1]); });
-    for (k = 0; k < r.length; k++) r[k] = d[k][2];
-    return r;
-  };
-
-  // ---------- troca 3: espera entre as teclas + "Mais perto" + "Você quis dizer" ----------
-  var digitando = false, tDeb = 0;
-  window.addEventListener("input", function (e) {
-    if (e.target && e.target.id === "busca") { digitando = true; setTimeout(function () { digitando = false; }, 0); }
-  }, true);
-  window.addEventListener("input", function () { digitando = false; });
-  var filtrosAntF = renderFiltros, visto = null;
-  renderFiltros = function (n) {
-    if (coleta) { visto = {lista: coleta, n: n}; coleta = null; }
-    return filtrosAntF.apply(this, arguments);
-  };
-  var renderAntF = renderList;
-  function rodar(self, args) {
-    var q = state.q.trim();
-    coleta = q ? [] : null; visto = null;
-    var r;
-    EST.renders = (EST.renders || 0) + 1;
-    try { r = renderAntF.apply(self, args); } finally { coleta = null; }
-    if (q) { try { enfeitar(q); } catch (e) { /* a lista já está na tela */ } }
-    return r;
-  }
-  renderList = function () {
-    if (digitando) {
-      var self = this, args = arguments;
-      clearTimeout(tDeb);
-      tDeb = setTimeout(function () { tDeb = 0; rodar(self, args); }, ESPERA);
-      return;
-    }
-    if (tDeb) { clearTimeout(tDeb); tDeb = 0; }
-    return rodar(this, arguments);
-  };
-  function enfeitar(q) {
-    var root = document.getElementById("lista-jogos");
-    if (!root || state.view === "quadro" || playlistAtiva()) return;
-    var html = "";
-    if (PRONTA && (SUG || !TOPF)) {
-      html += '<div class="fb-sug" role="status">' + (TOPF ? "Não achei “" + esc(q) + "” escrito assim — mostrando os parecidos." : "Não achei nada com “" + esc(q) + "”.") +
-        (SUG ? ' Você quis dizer <button type="button" class="fb-sug-b" data-fb-sug="' + esc(SUG) + '">' + esc(SUG) + "</button>?" : "") + "</div>";
-    }
-    if (visto) {
-      var lista = visto.lista.filter(function (g) { return !window.B_chips || B_chips(g); });
-      if (lista.length === visto.n && lista.length) {
-        var grupos = {};
-        lista.forEach(function (g) { grupos[state.agrupar === "genero" ? g.gn : g.s] = 1; });
-        if (state.view === "vitrine" || Object.keys(grupos).length > 1) {
-          var ord = sorted(lista.slice());
-          html += vitRow("vit-busca", "🔎 Mais perto de “" + esc(q) + "”", ord);
-        }
-      }
-    }
-    if (html) root.insertAdjacentHTML("afterbegin", html);
-  }
-  document.addEventListener("click", function (e) {
-    var b = e.target.closest ? e.target.closest("[data-fb-sug]") : null;
-    if (!b) return;
-    var inp = document.getElementById("busca");
-    inp.value = b.dataset.fbSug;
-    inp.dispatchEvent(new Event("input", {bubbles: true}));
-  });
+  // ---------- estilo ----------
   var css = document.createElement("style");
-  css.textContent = ".fb-sug{margin:4px 0 16px;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;color:var(--ink);line-height:1.5}" +
-    ".fb-sug-b{font:inherit;font-weight:700;color:var(--accent-ink);background:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:2px 12px;margin:0 2px;cursor:pointer;min-height:32px}";
+  css.id = "l-css";
+  css.textContent = [
+    // o que fica escondido com o catálogo na tela (os elementos continuam no DOM: os outros módulos usam)
+    "html.l-on:not(.l-lista) main.wrap > :not(header):not(#l-raiz):not(#aviso-capas) { display: none !important; }",
+    "html.l-on:not(.l-lista) #sub, html.l-on:not(.l-lista) #resumo, html.l-on:not(.l-lista) #p-pac > .btn, html.l-on:not(.l-lista) header .n-lugar, html.l-on:not(.l-lista) header .c-topo, html.l-on:not(.l-lista) #a-busca-fixa { display: none !important; }",
+    "html.l-on:not(.l-lista) header h1 { font-size: 26px; margin: 0; }",
+    "html.l-on:not(.l-lista) #p-pac:not(:has(> :not(.btn))) { display: none; }",
+    "html.l-on:not(.l-lista) #p-pac .p-txt { font-size: 13px; margin: 2px 0 0; }",
+    // na lista antiga: os chips rápidos e a fileira de etiquetas viraram a folha de filtros
+    "html.l-on .chips-b, html.l-on #etq-bar { display: none !important; }",
+    "html.l-on.l-lista #l-raiz > :not(.l-abas) { display: none !important; }",
+    "#l-raiz { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; min-width: 0; max-width: 100%; }",
+    "#l-home, #l-col { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }",
+    "#l-raiz[hidden], #l-raiz [hidden] { display: none !important; }",
+    // abas
+    ".l-abas { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }",
+    ".l-abas button { font: inherit; font-weight: 700; font-size: 15px; min-height: 42px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); cursor: pointer; }",
+    ".l-abas button[aria-selected=true] { background: var(--accent); color: var(--accent-ink); }",
+    "#l-raiz.l-em-col .l-abas { display: none; }",
+    "html.l-lista #l-raiz .l-abas { display: grid; }",
+    // barra presa no alto: voltar, busca, filtros e os filtros ligados
+    ".l-barra { position: sticky; top: 0; z-index: 6; margin: 0 -16px; padding: 8px 16px 8px; background: var(--bg); box-shadow: 0 6px 10px -10px rgba(0,0,0,.35); }",
+    "@media (min-width: 700px) { .l-barra { margin: 0 -20px; padding: 10px 20px; } }",
+    ".l-linha { display: flex; gap: 8px; align-items: center; }",
+    ".l-voltar { flex: none; width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 26px; line-height: 1; cursor: pointer; }",
+    ".l-busca { flex: 1; min-width: 0; position: relative; }",
+    ".l-busca input { width: 100%; box-sizing: border-box; font: inherit; font-size: 16px; min-height: 44px; padding: 8px 12px 8px 38px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }",
+    ".l-busca::before { content: '🔎'; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 15px; opacity: .7; pointer-events: none; }",
+    ".l-fbtn { flex: none; font: inherit; font-weight: 700; min-height: 44px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }",
+    ".l-fbtn .l-fn:not(:empty) { min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 13px; display: inline-grid; place-items: center; }",
+    ".l-ativos { display: flex; gap: 6px; overflow-x: auto; padding: 8px 0 2px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }",
+    ".l-ativos::-webkit-scrollbar { display: none; }",
+    ".l-ativos:empty { display: none; }",
+    ".l-chip { flex: none; font: inherit; font-size: 14px; font-weight: 600; min-height: 36px; padding: 2px 8px 2px 12px; border-radius: 999px; border: 1px solid var(--accent); background: var(--accent-soft); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }",
+    ".l-chip .x { font-size: 13px; width: 20px; height: 20px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--accent); color: var(--accent-ink); }",
+    ".l-chip.l-limpa { border-style: dashed; background: transparent; color: var(--accent); padding: 2px 12px; }",
+    "#filtros .l-ativos { flex-basis: 100%; }",
+    // atalhos
+    ".l-atalhos { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }",
+    ".l-atalhos::-webkit-scrollbar { display: none; }",
+    ".l-atalhos button { flex: none; font: inherit; font-size: 14px; font-weight: 600; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; white-space: nowrap; }",
+    "@media (min-width: 900px) { .l-atalhos { flex-wrap: wrap; overflow: visible; } }",
+    ".l-todos { width: 100%; font: inherit; font-weight: 700; font-size: 15px; min-height: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--accent); cursor: pointer; text-align: left; padding: 0 16px; display: flex; justify-content: space-between; align-items: center; }",
+    ".l-aviso { margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); color: var(--muted); font-size: 14px; }",
+    // prateleiras
+    ".l-prat { margin: 0; }",
+    ".l-prat:not([data-n]) { min-height: var(--l-ph, 262px); }",
+    ".l-prat[data-n] { content-visibility: auto; contain-intrinsic-size: auto var(--l-ph, 262px); }",
+    ".l-calc { margin: 0; padding: 40px 4px; color: var(--muted); font-size: 14px; }",
+    ".l-prat-cab { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; min-height: 40px; }",
+    ".l-prat-cab h2 { margin: 0; flex: 1; min-width: 0; font-family: var(--font-display); font-size: 19px; line-height: 1.2; }",
+    ".l-prat-cab h2 button { font: inherit; color: var(--ink); background: none; border: 0; padding: 0; cursor: pointer; text-align: left; display: inline-flex; align-items: center; gap: 8px; max-width: 100%; }",
+    ".l-prat-cab h2 svg { width: 22px; height: 22px; flex: none; color: var(--accent); }",
+    ".l-prat-cab .n { font-family: var(--font-body); font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap; }",
+    ".l-vt-link { flex: none; font: inherit; font-size: 14px; font-weight: 700; color: var(--accent); background: none; border: 0; padding: 8px 4px 8px 10px; cursor: pointer; min-height: 40px; white-space: nowrap; }",
+    ".l-prat .vit-trilho { align-items: start; }",
+    ".l-prat .capa-nome, .l-grade .capa-nome { min-height: 2.5em; }",
+    ".l-vt { width: 148px; aspect-ratio: 1; border-radius: 14px; border: 2px dashed var(--line); background: var(--surface); color: var(--accent); font: inherit; font-weight: 700; font-size: 15px; cursor: pointer; display: grid; place-items: center; text-align: center; line-height: 1.35; scroll-snap-align: start; }",
+    ".l-vt small { display: block; color: var(--muted); font-weight: 600; font-size: 13px; }",
+    "@media (min-width: 700px) { .l-vt { width: 172px; } }",
+    // catálogo
+    ".l-col-cab { display: grid; gap: 4px; }",
+    ".l-col-cab h2 { margin: 0; font-family: var(--font-display); font-size: 26px; line-height: 1.15; display: flex; align-items: center; gap: 10px; }",
+    ".l-col-cab h2 svg { width: 28px; height: 28px; flex: none; color: var(--accent); }",
+    ".l-col-sub { margin: 0; color: var(--muted); font-size: 14px; }",
+    ".l-col-sub strong { color: var(--ink); }",
+    ".l-ordem { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px 0; align-items: center; }",
+    ".l-ordem::-webkit-scrollbar { display: none; }",
+    ".l-ordem .rot { flex: none; font-size: 13px; font-weight: 700; color: var(--muted); }",
+    ".l-ordem button { flex: none; font: inherit; font-size: 14px; font-weight: 600; min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; white-space: nowrap; }",
+    ".l-ordem button[aria-pressed=true] { background: var(--ink); border-color: var(--ink); color: var(--bg); }",
+    ".l-grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 10px; }",
+    "html[data-cols='1'] .l-grade { grid-template-columns: minmax(0, 1fr); }",
+    "html[data-cols='3'] .l-grade { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 8px; }",
+    "html[data-cols='4'] .l-grade { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 6px; }",
+    "@media (min-width: 700px) { .l-grade, html[data-cols] .l-grade { grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 18px 14px; } }",
+    ".l-grade .vit-item { min-width: 0; content-visibility: auto; contain-intrinsic-size: auto 250px; }",
+    ".l-grade .vit-card { width: 100%; }",
+    ".l-grade .vit-card .cover { width: 100%; }",
+    ".l-mais { font: inherit; font-weight: 700; min-height: 48px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; margin-top: 6px; }",
+    ".l-vazio { padding: 22px 16px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); text-align: center; display: grid; gap: 10px; justify-items: center; }",
+    ".l-vazio p { margin: 0; }",
+    ".l-btn { font: inherit; font-weight: 700; min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); cursor: pointer; }",
+    ".l-sug { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); line-height: 1.5; }",
+    ".l-sug button { font: inherit; font-weight: 700; color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 999px; padding: 2px 12px; min-height: 32px; cursor: pointer; }",
+    // gênero clicável na ficha
+    "#l-col-tit:focus { outline: none; }",
+    "#ficha .gen.l-gen { color: var(--accent); cursor: pointer; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 3px; }",
+    "#ficha .gen.l-gen::after { content: ' ›'; }",
+    "#ficha .gen.l-gen:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 4px; }",
+    // folha de filtros
+    "#l-folha { padding: 0; border: 0; background: transparent; color: var(--ink); max-width: none; max-height: none; margin: 0; overflow: visible; }",
+    "#l-folha:modal { top: auto; bottom: 0; left: 0; right: 0; width: 100%; }",
+    "#l-folha::backdrop { background: rgba(8,12,20,.55); }",
+    ".l-f-in { box-sizing: border-box; max-height: 88dvh; display: flex; flex-direction: column; background: var(--surface); border-radius: 20px 20px 0 0; box-shadow: 0 -10px 40px rgba(0,0,0,.3); }",
+    ".l-f-cab { display: flex; align-items: center; gap: 8px; padding: 10px 12px 8px 18px; border-bottom: 1px solid var(--line); position: relative; }",
+    ".l-f-cab::before { content: ''; position: absolute; top: 5px; left: 50%; width: 40px; height: 4px; margin-left: -20px; border-radius: 4px; background: var(--line); }",
+    ".l-f-cab h2 { margin: 6px 0 0; flex: 1; font-family: var(--font-display); font-size: 21px; }",
+    ".l-f-x { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--bg); color: var(--ink); font-size: 18px; cursor: pointer; }",
+    ".l-f-corpo { overflow-y: auto; overscroll-behavior: contain; padding: 4px 18px 12px; }",
+    ".l-f-sec { padding: 12px 0 8px; border-bottom: 1px solid var(--line); }",
+    ".l-f-sec:last-child { border-bottom: 0; }",
+    ".l-f-sec h3 { margin: 0 0 8px; font-size: 15px; }",
+    ".l-f-sec h3 small { font-weight: 500; color: var(--muted); font-size: 13px; }",
+    ".l-f-sec h4 { margin: 8px 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }",
+    ".l-pills { display: flex; flex-wrap: wrap; gap: 6px; }",
+    ".l-pills button { font: inherit; font-size: 14px; font-weight: 600; min-height: 38px; padding: 2px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }",
+    ".l-pills button .n { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }",
+    ".l-pills button[aria-pressed=true] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }",
+    ".l-pills button[aria-pressed=true] .n { color: inherit; opacity: .85; }",
+    ".l-pills button.zero { opacity: .5; }",
+    ".l-f-pe { display: flex; gap: 10px; padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }",
+    ".l-f-pe button { font: inherit; font-weight: 700; min-height: 50px; border-radius: 14px; cursor: pointer; }",
+    ".l-f-limpar { flex: none; padding: 0 16px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }",
+    ".l-f-ok { flex: 1; border: 0; background: var(--accent); color: var(--accent-ink); font-size: 16px; }",
+    "@media (min-width: 700px) {",
+    "  #l-folha:modal { top: 0; bottom: 0; left: auto; right: 0; width: 440px; height: 100dvh; }",
+    "  .l-f-in { height: 100%; max-height: none; border-radius: 0; box-shadow: -10px 0 40px rgba(0,0,0,.3); }",
+    "  .l-f-cab::before { display: none; }",
+    "}"
+  ].join("\n");
   document.head.appendChild(css);
 
-  // ---------- quando o DATA cresce (catálogo chegando depois) ----------
-  window.addEventListener("estante-dados", montarAosPoucos);
-  setInterval(function () { if (mudou()) montarAosPoucos(); }, 3000);
-  setTimeout(montarAosPoucos, 400);
+  // ---------- jogos por id (e os que chegam do catálogo) ----------
+  var porId = {};
+  DATA.forEach(function (g) { porId[g.id] = g; }); (window.CAT_AO_CRESCER || []).push(function (novos) { novos.forEach(function (g) { porId[g.id] = g; }); });   // (numa linha só: o montar_app.py não inscreve de novo)
 
-  // pra testar e medir
-  window.F_busca = {
-    est: EST,
-    perf: function () { return PERF; },
-    reindexar: function () { zerar(); montarAosPoucos(); },
-    garantir: function () { garantir(); return EST; },
-    pronta: function () { return PRONTA; },
-    sugestao: function () { return SUG; },
-    nivel: function () { return MELHOR; },
-    // os n primeiros de toda a base (sem filtros), com a nota
-    top: function (q, n) {
-      prep(norm(String(q)));
-      var r = [];
-      for (var i = 0; i < N; i++) if (SC[i]) r.push(i);
-      r.sort(function (a, b) { return SC[b] - SC[a]; });
-      return r.slice(0, n || 3).map(function (i) { return {n: REF[i].n, nota: Math.round(SC[i]), l: REF[i].l}; });
-    },
-    medir: function (q) { chave = null; FZ.clear(); TH.clear(); var t = performance.now(); prep(norm(String(q))); return performance.now() - t; }
+  function nt(g) { var e = EXTRA[g.id]; return (e && e.nt) || 0; }
+  function gostoR(g) { try { return window.notaGosto ? notaGosto(g) : null; } catch (e) { return null; } }
+  function gosto(g) { var r = gostoR(g); return r ? r.n : 50; }
+  function ehJoia(g) { try { return !!(window.J_ehJoia && J_ehJoia(g.id)); } catch (e) { return false; } }
+  function plAt() { try { return typeof playlistAtiva === "function" ? playlistAtiva() : null; } catch (e) { return null; } }
+  function qAtual() { return norm((state.q || "").trim()); }
+
+  // ---------- filtros: os mesmos do renderList (01.js), mais a nota daqui ----------
+  state.lNota = [70, 80, 90].indexOf(Number(ler(KN, 0))) >= 0 ? Number(ler(KN, 0)) : 0;
+  if (typeof tamOk === "function") {
+    var tamAntL = tamOk;
+    tamOk = function (g) { return (!state.lNota || nt(g) >= state.lNota) && tamAntL.apply(this, arguments); };
+  }
+  if (typeof filtrosAtivos === "function") {
+    var ativosAntL = filtrosAtivos;
+    filtrosAtivos = function () { return ativosAntL.apply(this, arguments) + (state.lNota ? 1 : 0); };
+  }
+  if (typeof limparFiltros === "function") {
+    var limparAntL = limparFiltros;
+    limparFiltros = function () { state.lNota = 0; gravar(KN, 0); return limparAntL.apply(this, arguments); };
+  }
+  function passa(g, q, pl, semGen) {
+    return (!state.status || g.s === state.status) &&
+      (state.list === "tudo" || (state.list === "all" ? (g.l !== 5 || state.status === "cat" || !!q) : String(g.l) === state.list)) &&
+      (!state.onlyHype || g.h > 0) &&
+      (semGen || state.genre === "all" || g.gn === state.genre) &&
+      (!state.onlyMarked || state.sel.has(g.id)) &&
+      (!state.onlyFav || state.fav.has(g.id)) &&
+      romOk(g) && minhaOk(g) && planoOk(g) && durOk(g) && idiomaOk(g) &&
+      (!pl || pl.j.indexOf(g.id) >= 0) &&
+      tamOk(g) &&
+      (!state.onlyNew || ehNovo(g)) &&
+      (!q || (window.B_ok ? B_ok(g, q) : norm(g.n).indexOf(q) >= 0)) && (!window.B_chips || B_chips(g));
+  }
+  // chips do mod_B e etiquetas do mod_Q: o estado fica com eles; aqui só se lê (aria-pressed) e se liga/desliga (clique)
+  function chipB(k) { return document.querySelector('.chips-b [data-chip-b="' + k + '"]'); }
+  function chipBOn(k) { var b = chipB(k); return !!b && b.getAttribute("aria-pressed") === "true"; }
+  function chipBPor(k, on) { var b = chipB(k); if (b && chipBOn(k) !== !!on) b.click(); }
+  function etqBotoes() { return document.querySelectorAll("#etq-bar [data-etq]"); }
+  // (a escolha das etiquetas fica gravada pelo mod_Q a cada clique; o aria-pressed da fileira dele só é repintado com a lista antiga)
+  function etqSel() { var r = ler(KEY + "-Q-etiq", []); return Array.isArray(r) ? r.filter(function (c) { return !!document.querySelector('#etq-bar [data-etq="' + c + '"]'); }) : []; }
+  function etqPor(c, on) { var b = document.querySelector('#etq-bar [data-etq="' + c + '"]'); if (b && (etqSel().indexOf(c) >= 0) !== !!on) b.click(); }
+  function chipsAss() {
+    var r = [];
+    document.querySelectorAll(".chips-b [aria-pressed=true]").forEach(function (b) { r.push(b.dataset.chipB); });
+    return r.join(",") + "/" + etqSel().join(",");
+  }
+  function assin() {
+    return [state.status, state.list, state.onlyHype, state.genre, state.onlyMarked, state.onlyFav, state.rom, state.minha, state.plano, state.dur,
+      state.idioma, state.size, state.onlyNew, state.plAtiva, state.soJoia, state.lNota, state.q, chipsAss(), DATA.length,
+      state.onlyFav || state.size === "cabe" ? state.fav.size + ":" + state.sel.size : ""].join("|");
+  }
+  function filtroK() { var a = assin().split("|"); a.splice(a.length - 2, 1); return a.join("|"); }
+  var cb = {k: null};
+  function base() {
+    var k = assin();
+    if (cb.k === k) return cb;
+    var t0 = performance.now(), q = qAtual(), pl = plAt(), gen = state.genre, semGen = [], lista = [];
+    for (var i = 0; i < DATA.length; i++) {
+      var g = DATA[i];
+      if (passa(g, q, pl, true)) { semGen.push(g); if (gen === "all" || g.gn === gen) lista.push(g); }
+    }
+    cb = {k: k, semGen: semGen, lista: lista, col: {}, set: null, gen: null};
+    T.filtro = Math.round(performance.now() - t0);
+    return cb;
+  }
+  function noBase(b) { if (!b.set) { b.set = new Set(); b.lista.forEach(function (g) { b.set.add(g.id); }); } return b.set; }
+  function porGenero(b) {
+    if (!b.gen) { b.gen = {}; b.lista.forEach(function (g) { (b.gen[g.gn] = b.gen[g.gn] || []).push(g); }); }
+    return b.gen;
+  }
+
+  // ---------- ordem ----------
+  var ORDENS = [["cara", "🎯 Mais a sua cara"], ["nota", "★ Nota"], ["nome", "A–Z Nome"], ["novos", "✨ Mais novos"]];
+  var ordem = ler(KO, "cara");
+  if (!ORDENS.some(function (o) { return o[0] === ordem; })) ordem = "cara";
+  function posNome(g) { var o = ORDEM_NOME.get(g); return o === undefined ? 1e9 : o; }
+  // "Mais novos": a última atualização da lista primeiro; depois pelo número do jogo na eShop (sai em ordem de lançamento)
+  function chaveNovo(g) { var n = g.id.charAt(0) === "c" ? parseInt(g.id.substr(8, 6), 16) || 0 : -1; return (ehNovo(g) ? 1e9 : 0) + n; }
+  function ordenar(arr, o) {
+    var d = new Array(arr.length), i, g;
+    for (i = 0; i < arr.length; i++) {
+      g = arr[i];
+      d[i] = o === "nota" ? [nt(g), 0, -posNome(g), g] : o === "nome" ? [-posNome(g), 0, 0, g] : o === "novos" ? [chaveNovo(g), 0, -posNome(g), g] : [gosto(g), nt(g), -posNome(g), g];
+    }
+    d.sort(function (a, b) { return (b[0] - a[0]) || (b[1] - a[1]) || (b[2] - a[2]); });
+    var r = new Array(d.length);
+    for (i = 0; i < d.length; i++) r[i] = d[i][3];
+    return r;
+  }
+
+  // "Mais a sua cara" precisa da nota de gosto (mod_W) de cada jogo. Na 1ª vez (ou depois de mudar uma marcação) ela custa
+  // ~40 µs por jogo no celular: com 19 mil, ~0,8 s de tela parada. Aqui ela é feita em pedaços de 30 ms, sem travar.
+  // Devolve true se já estava pronta (fez tudo agora); senão chama fim() quando terminar.
+  function aquecer(lista, fim) {
+    var i = 0, junto = true;
+    (function passo() {
+      var t0 = performance.now();
+      while (i < lista.length) { gostoR(lista[i++]); if ((i & 63) === 0 && performance.now() - t0 > 30) break; }
+      if (i < lista.length) { junto = false; setTimeout(passo, 0); }
+      else if (!junto) fim();
+    })();
+    return junto;
+  }
+  function precisaGosto(c, o) { return c === "cara" || (o === "cara" && c !== "busca" && c !== "recentes" && c.indexOf("pl:") !== 0); }
+
+  // ---------- coleções (o que cada prateleira e cada catálogo mostram) ----------
+  function recentesIds() {
+    var h = [];
+    try { h = window.S_historico ? S_historico() : []; } catch (e) { h = []; }
+    var vis = {}, r = [];
+    for (var i = h.length - 1; i >= 0 && r.length < 60; i--) {
+      var e = h[i];
+      if (e && e.a === "ficha" && e.id && !vis[e.id] && porId[e.id]) { vis[e.id] = 1; r.push(e.id); }
+    }
+    return r;
+  }
+  function ultFicha() { try { var h = window.S_historico ? S_historico() : []; for (var i = h.length - 1; i >= 0; i--) if (h[i].a === "ficha") return h[i].t + h[i].id; } catch (e) {} return ""; }
+  function caraOk(g) {
+    if (g.s === "veto" || g.x || state.fav.has(g.id) || plano(g, "j")) return false;
+    var r = gostoR(g);
+    return !r || r.cor === "verde";
+  }
+  function trad(g) { return !!minhaTr(g) || plano(g, "q"); }
+  var ORD_TRAD = {ok: 0, rev: 1, pc: 2};
+  function plDe(id) { return (state.pls || []).filter(function (p) { return p.id === id; })[0] || null; }
+  // c: home | todos | busca | joias | fav | cara | trad | recentes | pl:<id> | gen:<gn> (só prateleira)
+  function natural(c) { return c === "recentes" || c.indexOf("pl:") === 0 || c === "busca"; }
+  function itens(c, o) {
+    var b = base(), ch = c + "#" + (o || ""), x = b.col[ch];
+    if (x) return x;
+    var t0 = performance.now(), r;
+    if (c === "busca") {
+      r = sorted(b.lista.slice());
+    } else if (c === "recentes") {
+      var s1 = noBase(b);
+      r = recentesIds().filter(function (id) { return s1.has(id); }).map(function (id) { return porId[id]; });
+    } else if (c.indexOf("pl:") === 0) {
+      var p = plDe(c.slice(3)), s2 = noBase(b);
+      r = p ? p.j.filter(function (id) { return s2.has(id); }).map(function (id) { return porId[id]; }) : [];
+    } else {
+      var l;
+      if (c.indexOf("gen:") === 0) l = porGenero(b)[c.slice(4)] || [];
+      else if (c === "joias") l = b.lista.filter(ehJoia);
+      else if (c === "fav") l = b.lista.filter(function (g) { return state.fav.has(g.id); });
+      else if (c === "cara") l = b.lista.filter(caraOk);
+      else if (c === "trad") l = b.lista.filter(trad);
+      else l = b.lista;
+      r = ordenar(l, o || "cara");
+      if (c === "trad" && !o) r.sort(function (a, z) { var x1 = ORD_TRAD[minhaTr(a)], x2 = ORD_TRAD[minhaTr(z)]; return (x1 === undefined ? 3 : x1) - (x2 === undefined ? 3 : x2); });
+    }
+    T["col_" + c.split(":")[0]] = Math.round(performance.now() - t0);
+    b.col[ch] = r;
+    return r;
+  }
+
+  function contar(c) {
+    var b = base();
+    if (c === "todos" || c === "busca") return b.lista.length;
+    var f = c === "joias" ? ehJoia : c === "fav" ? function (g) { return state.fav.has(g.id); } : c === "cara" ? caraOk : c === "trad" ? trad : null;
+    if (!f) return itens(c, "").length;
+    var n = 0;
+    for (var i = 0; i < b.lista.length; i++) if (f(b.lista[i])) n++;
+    return n;
+  }
+
+  // ---------- títulos ----------
+  function temFiltro() { return ativos().length > 0; }
+  function titulo(c) {
+    if (c === "todos") {
+      if (state.genre !== "all" && GENRES[state.genre]) return {t: GENRES[state.genre].label, ico: GENRES[state.genre].svg, d: GEN_DESC[state.genre] || ""};
+      return {t: temFiltro() ? "Jogos com os seus filtros" : "Todos os jogos", d: ""};
+    }
+    if (c === "busca") return {t: "Busca: “" + esc((state.q || "").trim()) + "”", d: ""};
+    if (c === "joias") return {t: "💎 Joias escondidas", d: "Nota alta dos jogadores e pouco conhecidos."};
+    if (c === "fav") return {t: "★ Seus interesses", d: "Os jogos em que você deu estrela."};
+    if (c === "cara") return {t: "🟢 Mais a sua cara", d: "Os que mais combinam com o que você marca (romance, RPG, português, gêneros), fora os que já têm estrela."};
+    if (c === "trad") return {t: "✎ Suas traduções", d: "Pronta, revisando, traduzindo no PC e os que você quer traduzir."};
+    if (c === "recentes") return {t: "🕘 Continuar de onde parou", d: "As fichas que você abriu por último."};
+    if (c.indexOf("pl:") === 0) { var p = plDe(c.slice(3)); return {t: "🎵 " + esc(p ? p.n : "Playlist"), d: "Na ordem em que você pôs."}; }
+    if (c.indexOf("gen:") === 0) { var k = c.slice(4); return {t: GENRES[k] ? GENRES[k].label : k, ico: GENRES[k] ? GENRES[k].svg : "", d: GEN_DESC[k] || ""}; }
+    return {t: "Jogos", d: ""};
+  }
+
+  // ---------- filtros ligados (chips removíveis) ----------
+  var ROT = {
+    idioma: {dub: "🎙 Dublado", leg: "💬 PT-BR oficial", fa: "💬 Tradução pronta", sem: "Sem português"},
+    rom: {com: "♥ Com romance", sim: "♥ Romance central", algum: "♡ Qualquer romance", nao: "Sem romance", nc: "Romance não conferido"},
+    size: {p: "Até 2 GB", m: "2 a 5 GB", g: "5 a 10 GB", gg: "10 a 20 GB", xg: "Mais de 20 GB", cabe: "Cabe no cartão"},
+    dur: {"5": "⏱ Até 5 h", "7": "⏱ Até 7 h", "10": "⏱ Até 10 h", "20": "⏱ Até 20 h", "40": "⏱ Até 40 h", mais: "⏱ Mais de 40 h"}
   };
-  if (state.q.trim()) renderList();
+  var CAMPO_EL = {genre: "genero", idioma: "idioma", rom: "romance", size: "tamanho", dur: "duracao", plano: "plano", minha: "minha", list: "lista"};
+  var CHECK_EL = {onlyFav: "so-interesse", onlyMarked: "so-marcados", onlyNew: "so-novos", onlyHype: "so-destaque", soJoia: "j-so"};
+  function por(k, v) {
+    state[k] = v;
+    var el = CAMPO_EL[k] ? $(CAMPO_EL[k]) : CHECK_EL[k] ? $(CHECK_EL[k]) : null;
+    if (el) { if (CHECK_EL[k]) el.checked = !!v; else el.value = v; }
+    if (k === "lNota") gravar(KN, v);
+  }
+  function txtOpcao(sel, v) { var el = $(sel), o = el && Array.prototype.filter.call(el.options, function (x) { return x.value === String(v); })[0]; return o ? o.textContent : String(v); }
+  function ativos() {
+    var r = [];
+    function add(rot, tira) { r.push({rot: rot, tira: tira}); }
+    if (state.genre !== "all" && GENRES[state.genre]) add(GENRES[state.genre].label, function () { por("genre", "all"); });
+    if (state.idioma !== "all") add(ROT.idioma[state.idioma] || txtOpcao("idioma", state.idioma), function () { por("idioma", "all"); });
+    if (chipBOn("pt")) add("💬 Em português", function () { chipBPor("pt", false); });
+    if (state.rom !== "all") add(ROT.rom[state.rom] || txtOpcao("romance", state.rom), function () { por("rom", "all"); });
+    if (chipBOn("rom")) add("♥ Com romance", function () { chipBPor("rom", false); });
+    etqSel().forEach(function (c) { add("🏷 " + ((window.ETIQ || (typeof ETIQ !== "undefined" ? ETIQ : {}))[c] || {label: c}).label, function () { etqPor(c, false); }); });
+    if (state.size !== "all") add(ROT.size[state.size] || txtOpcao("tamanho", state.size), function () { por("size", "all"); });
+    if (state.dur !== "all") add(ROT.dur[state.dur] || txtOpcao("duracao", state.dur), function () { por("dur", "all"); });
+    if (chipBOn("curto")) add("⏱ Até 30 h", function () { chipBPor("curto", false); });
+    if (state.lNota) add("★ Nota " + state.lNota + "+", function () { por("lNota", 0); });
+    if (chipBOn("nota")) add("★ Nota 80+", function () { chipBPor("nota", false); });
+    if (state.onlyFav) add("★ Com estrela", function () { por("onlyFav", false); });
+    if (chipBOn("fav")) add("★ Minhas estrelas", function () { chipBPor("fav", false); });
+    if (state.onlyMarked) add("✓ Marcados pra instalar", function () { por("onlyMarked", false); });
+    if (state.onlyHype) add("🔥 Os que você destacou", function () { por("onlyHype", false); });
+    if (state.onlyNew) add("✨ Novos na lista", function () { por("onlyNew", false); });
+    if (state.soJoia) add("💎 Só joias", function () { por("soJoia", false); });
+    if (state.plano !== "all") add(state.plano === "w" ? "▶ Quero jogar" : txtOpcao("plano", state.plano), function () { por("plano", "all"); });
+    if (state.minha !== "all") add(txtOpcao("minha", state.minha), function () { por("minha", "all"); });
+    if (state.list !== "tudo") add(txtOpcao("lista", state.list), function () { por("list", "tudo"); try { renderTiles(); } catch (e) {} });
+    if (state.status && STATUS[state.status]) add(STATUS[state.status].label, function () { state.status = null; try { renderTiles(); } catch (e) {} });
+    if (state.plAtiva) { var p = plAt(); add("🎵 " + (p ? p.n : "Playlist"), function () { state.plAtiva = null; try { renderPlaylists(); } catch (e) {} }); }
+    return r;
+  }
+  var ativosAtual = [];
+  function chipsHTML() {
+    ativosAtual = ativos();
+    if (!ativosAtual.length) return "";
+    return ativosAtual.map(function (a, i) {
+      return '<button type="button" class="l-chip" data-l-tira="' + i + '" aria-label="Tirar o filtro ' + esc(a.rot) + '">' + esc(a.rot) + '<span class="x" aria-hidden="true">✕</span></button>';
+    }).join("") + (ativosAtual.length > 1 ? '<button type="button" class="l-chip l-limpa" data-l-limpar>Limpar tudo</button>' : "");
+  }
+  function pintarAtivos() {
+    var h = chipsHTML();
+    [elAtivos, elAtivos2].forEach(function (el) { if (el && el.innerHTML !== h) el.innerHTML = h; });
+    var n = ativosAtual.length;
+    elFn.textContent = n ? String(n) : "";
+    btnFiltros.setAttribute("aria-label", n ? "Filtros, " + n + (n === 1 ? " ligado" : " ligados") : "Filtros");
+  }
+  function limparTudo() {
+    // dentro do catálogo de um gênero, o gênero fica (ele é a "prateleira"); o ✕ do chip dele tira
+    var gen = vista.c === "todos" ? state.genre : "all", q = state.q;
+    limparFiltros();
+    if (gen !== "all") por("genre", gen);
+    if (q) { state.q = q; var bq = $("busca"); if (bq) bq.value = q; }
+    renderList();
+  }
+
+  // ---------- DOM ----------
+  var raiz = document.createElement("div");
+  raiz.id = "l-raiz";
+  raiz.innerHTML =
+    '<div class="l-abas" role="tablist" aria-label="Como ver os jogos">' +
+    '<button type="button" role="tab" data-l-aba="cat" aria-selected="true">🏠 Catálogo</button>' +
+    '<button type="button" role="tab" data-l-aba="lista" aria-selected="false">☰ Lista completa</button></div>' +
+    '<div class="l-barra" id="l-barra"><div class="l-linha">' +
+    '<button type="button" class="l-voltar" data-l-voltar aria-label="Voltar" hidden>‹</button>' +
+    '<div class="l-busca"><input type="search" id="l-busca" placeholder="Buscar jogo" aria-label="Buscar jogo" enterkeyhint="search" autocomplete="off"></div>' +
+    '<button type="button" class="l-fbtn" id="l-fbtn" data-l-filtros aria-haspopup="dialog">Filtros<span class="l-fn" id="l-fn"></span></button></div>' +
+    '<div class="l-ativos" id="l-ativos" role="group" aria-label="Filtros ligados"></div></div>' +
+    '<div id="l-home"><div class="l-atalhos" id="l-atalhos" role="group" aria-label="Atalhos"></div>' +
+    '<p class="l-aviso" id="l-carregando" hidden></p>' +
+    '<button type="button" class="l-todos" data-l-abrir="todos" id="l-todos"></button>' +
+    '<div id="l-prats"></div></div>' +
+    '<div id="l-col" hidden><div class="l-col-cab"><h2 id="l-col-tit" tabindex="-1"></h2><p class="l-col-sub" id="l-col-sub"></p></div>' +
+    '<div class="l-ordem" id="l-ordem" role="group" aria-label="Ordenar"></div>' +
+    '<div id="l-col-msg"></div><div class="l-grade" id="l-grade"></div>' +
+    '<button type="button" class="l-mais" id="l-mais" data-l-mais hidden></button></div>';
+  var hd = document.querySelector("main.wrap > header") || document.querySelector("header");
+  if (hd && hd.parentNode) hd.parentNode.insertBefore(raiz, hd.nextSibling); else document.body.prepend(raiz);
+  var elHome = $("l-home"), elCol = $("l-col"), elPrats = $("l-prats"), elGrade = $("l-grade"), elMais = $("l-mais");
+  var elAtivos = $("l-ativos"), elFn = $("l-fn"), btnFiltros = $("l-fbtn"), elBusca = $("l-busca"), btnVoltar = raiz.querySelector("[data-l-voltar]");
+  // os filtros ligados também na lista antiga, no lugar dos chips rápidos
+  var elAtivos2 = document.createElement("div");
+  elAtivos2.className = "l-ativos"; elAtivos2.id = "l-ativos2"; elAtivos2.setAttribute("role", "group"); elAtivos2.setAttribute("aria-label", "Filtros ligados");
+  (function () { var m = $("mostrando"); if (m && m.parentNode) m.parentNode.insertBefore(elAtivos2, m); })();
+
+  // atalhos: os botões do topo (de outros módulos) continuam no DOM; aqui um atalho que clica neles
+  var ATALHOS = ["r-abrir", "t-abrir", "j-abrir", "s-abrir", "k-abrir", "v-abrir", "n-abrir", "g-abrir", "p-abrir", "h-botao", "c-aj-btn"];
+  function pintarAtalhos() {
+    var h = "";
+    ATALHOS.forEach(function (id) {
+      var b = $(id);
+      if (b) h += '<button type="button" data-l-atalho="' + id + '">' + esc(b.textContent.trim()) + "</button>";
+    });
+    var el = $("l-atalhos");
+    if (el.innerHTML !== h) el.innerHTML = h;
+  }
+
+  // ---------- modo e vista ----------
+  var vista = {c: "home"};
+  function modoCat() { return !H.classList.contains("l-lista"); }
+  var folha = null;
+  function folhaAberta() { return !!(folha && folha.open); }
+
+  // ---------- prateleiras ----------
+  function pratsDef() {
+    var l = [{k: "recentes"}, {k: "fav"}, {k: "cara"}, {k: "joias"}, {k: "trad"}];
+    (state.pls || []).forEach(function (p) { if (p.j.length) l.push({k: "pl:" + p.id}); });
+    GEN_ORDER.forEach(function (gn) { if (GENRES[gn]) l.push({k: "gen:" + gn}); });
+    return l;
+  }
+  var homeK = null, ioPrat = null;
+  function cartaoVT(k, n) {
+    return '<button type="button" class="l-vt" data-l-abrir="' + esc(k) + '">Ver tudo ›<small>' + jogos(n) + "</small></button>";
+  }
+  function pintarPrat(sec, manter) {
+    var k = sec.dataset.prat, b = base();
+    if (!b.col[k + "#"] && k === "cara" && b.lista.length > 1500 && !aquecer(b.lista, function () { if (sec.isConnected && cb === b) pintarPrat(sec, manter); })) {
+      var tr0 = sec.querySelector(".vit-trilho");
+      if (tr0 && !tr0.children.length) tr0.innerHTML = '<p class="l-calc">Vendo o que é a sua cara…</p>';
+      return;
+    }
+    var l = itens(k), n = Math.min(l.length, Math.max(PRAT_INI, (manter && manter.n) || 0));
+    if (!l.length) { sec.hidden = true; sec.dataset.n = "0"; return; }
+    sec.hidden = false;
+    sec.querySelector(".n").textContent = jogos(l.length);
+    var tr = sec.querySelector(".vit-trilho");
+    tr.innerHTML = l.slice(0, n).map(vitCard).join("") + (l.length > n || n >= PRAT_INI ? cartaoVT(k, l.length) : "");
+    sec.dataset.n = String(n);
+    if (manter && manter.x) tr.scrollLeft = manter.x;
+    if (!altPrat && sec.offsetHeight > 100) { altPrat = sec.offsetHeight; elPrats.style.setProperty("--l-ph", altPrat + "px"); }
+  }
+  var altPrat = 0;
+  function maisNaPrat(sec) {
+    var k = sec.dataset.prat, l = itens(k), n = Number(sec.dataset.n) || 0;
+    if (n >= l.length || n >= PRAT_MAX) return;
+    var m = Math.min(l.length, n + PRAT_INI, PRAT_MAX), tr = sec.querySelector(".vit-trilho"), vt = tr.querySelector(".l-vt");
+    var h = l.slice(n, m).map(vitCard).join("");
+    if (vt) vt.insertAdjacentHTML("beforebegin", h); else tr.insertAdjacentHTML("beforeend", h);
+    sec.dataset.n = String(m);
+  }
+  var xHome = {};
+  function guardarX() { xHome = {}; elPrats.querySelectorAll(".l-prat").forEach(function (s) { var tr = s.querySelector(".vit-trilho"); if (tr && tr.scrollLeft) xHome[s.dataset.prat] = tr.scrollLeft; }); }
+  function devolverX() { Object.keys(xHome).forEach(function (k) { var s = elPrats.querySelector('[data-prat="' + k + '"] .vit-trilho'); if (s) s.scrollLeft = xHome[k]; }); }
+  function renderHome(forcar, y) {
+    var b = base();
+    var k = b.k + "|" + (state.pls || []).map(function (p) { return p.id + ":" + p.n + ":" + p.j.length; }).join(",") + "|" + ultFicha() + "|" + state.fav.size;
+    pintarAtalhos();
+    var tot = b.lista.length;
+    $("l-todos").innerHTML = "<span>" + (temFiltro() ? "Ver os " + jogos(tot) + " com os seus filtros" : "Ver todos os " + jogos(tot)) + "</span><span aria-hidden=\"true\">›</span>";
+    var car = $("l-carregando");
+    car.hidden = !window.CAT_CARREGANDO;
+    if (window.CAT_CARREGANDO) car.textContent = "Juntando o catálogo completo… as prateleiras se completam sozinhas.";
+    if (!forcar && k === homeK) { if (y !== undefined) window.scrollTo(0, y); devolverX(); return; }
+    var t0 = performance.now();
+    T.homeN = (T.homeN || 0) + 1;
+    homeK = k;
+    var antes = {};
+    elPrats.querySelectorAll(".l-prat").forEach(function (s) {
+      var tr = s.querySelector(".vit-trilho");
+      if (s.dataset.n && s.dataset.n !== "0" && tr) antes[s.dataset.prat] = {x: tr.scrollLeft || xHome[s.dataset.prat] || 0, n: Number(s.dataset.n)};
+    });
+    var gens = porGenero(b);
+    elPrats.innerHTML = pratsDef().map(function (p) {
+      var g = p.k.indexOf("gen:") === 0, nG = g ? (gens[p.k.slice(4)] || []).length : -1;
+      if (g && !nG) return "";
+      var ti = titulo(p.k);
+      return '<section class="l-prat" data-prat="' + esc(p.k) + '" aria-label="' + esc(ti.t.replace(/<[^>]+>/g, "")) + '">' +
+        '<div class="l-prat-cab"><h2><button type="button" data-l-abrir="' + esc(p.k) + '">' + (ti.ico || "") + "<span>" + ti.t + '</span> <span class="n">' + (nG >= 0 ? jogos(nG) : "") + "</span></button></h2>" +
+        '<button type="button" class="l-vt-link" data-l-abrir="' + esc(p.k) + '">Ver tudo ›</button></div>' +
+        '<div class="vit-wrap"><button type="button" class="vit-seta esq" data-rolar="-1" aria-label="Voltar">‹</button>' +
+        '<div class="vit-trilho"></div><button type="button" class="vit-seta dir" data-rolar="1" aria-label="Avançar">›</button></div></section>';
+    }).join("");
+    if (y !== undefined) window.scrollTo(0, y);
+    // as que já estão na tela (ou quase) são desenhadas agora; as outras quando chegam perto
+    if (ioPrat) ioPrat.disconnect();
+    var alto = innerHeight + 400;
+    elPrats.querySelectorAll(".l-prat").forEach(function (s) {
+      var r = s.getBoundingClientRect();
+      if ((r.top < alto && r.bottom > -400) || !("IntersectionObserver" in window)) pintarPrat(s, antes[s.dataset.prat]);
+      else if (ioPrat) { s._lAntes = antes[s.dataset.prat]; ioPrat.observe(s); }
+    });
+    T.home = Math.round(performance.now() - t0);
+  }
+  if ("IntersectionObserver" in window) {
+    ioPrat = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        ioPrat.unobserve(e.target);
+        try { pintarPrat(e.target, e.target._lAntes); } catch (er) {}
+      });
+    }, {rootMargin: "500px 0px"});
+  }
+  // deslizou até o fim de uma prateleira: mais capas
+  elPrats.addEventListener("scroll", function (e) {
+    var tr = e.target;
+    if (!tr.classList || !tr.classList.contains("vit-trilho")) return;
+    if (tr.scrollLeft + tr.clientWidth > tr.scrollWidth - tr.clientWidth * 0.8) { var s = tr.closest(".l-prat"); if (s) maisNaPrat(s); }
+  }, true);
+
+  // ---------- catálogo (grade) ----------
+  var colArr = [], colN = 0, colK = null, colF = null, colC = null, ioMais = null;
+  function ordemDe(c) { return natural(c) ? "" : ordem; }
+  function renderCol(c, opc) {
+    opc = opc || {};
+    var t0 = performance.now(), o = ordemDe(c), b0 = base();
+    if (!b0.col[c + "#" + o] && precisaGosto(c, o) && b0.lista.length > 1500) {
+      var cc = c;
+      if (!aquecer(b0.lista, function () { if (vista.c === cc && cb === b0 && modoCat()) renderCol(cc, {forcar: true, n: opc.n}); })) {
+        colK = null; colF = null; colArr = [];
+        pintarCabCol(c);
+        $("l-col-sub").innerHTML = "Montando a lista…";
+        $("l-col-msg").innerHTML = '<p class="l-calc">Vendo o que é a sua cara nos ' + jogos(b0.lista.length) + "…</p>";
+        elGrade.innerHTML = ""; pintarMais();
+        return;
+      }
+    }
+    var arr = itens(c, o);
+    var k = base().k + "#" + c + "#" + o, f = filtroK() + "#" + c + "#" + o;
+    if (!opc.forcar && k === colK) { pintarCabCol(c); return; }
+    var mesmoFiltro = colF === f && !opc.n;
+    colK = k; colF = f; colC = c; colArr = arr;
+    var n = opc.n || (mesmoFiltro ? Math.max(PASSO, colN) : PASSO);
+    colN = Math.min(arr.length, n);
+    pintarCabCol(c);
+    var msg = "";
+    if (c === "busca") {
+      var sug = "";
+      try { sug = window.F_busca && F_busca.sugestao ? F_busca.sugestao() : ""; } catch (e) { sug = ""; }
+      if (sug && norm(sug) !== qAtual()) msg = '<p class="l-sug">' + (arr.length ? "Não achei escrito assim: mostrando os parecidos." : "Não achei nada.") +
+        ' Você quis dizer <button type="button" data-fb-sug="' + esc(sug) + '">' + esc(sug) + "</button>?</p>";
+    }
+    if (!arr.length) {
+      var f = temFiltro();
+      msg += '<div class="l-vazio"><p>' + (c === "busca" ? "Nenhum jogo com esse nome" + (f ? " e esses filtros." : ".") : c === "fav" && !f ? "Você ainda não deu estrela em nenhum jogo. Toque na ☆ de uma capa." : "Nenhum jogo aqui com esses filtros.") + "</p>" +
+        (f ? '<button type="button" class="l-btn" data-l-limpar>Limpar os filtros</button>' : "") + "</div>";
+    }
+    $("l-col-msg").innerHTML = msg;
+    elGrade.innerHTML = arr.slice(0, colN).map(vitCard).join("");
+    pintarMais();
+    T.grade = Math.round(performance.now() - t0);
+  }
+  function pintarCabCol(c) {
+    var ti = titulo(c), n = colArr.length;
+    var h = (ti.ico || "") + "<span>" + ti.t + "</span>";
+    var el = $("l-col-tit");
+    if (el.innerHTML !== h) el.innerHTML = h;
+    $("l-col-sub").innerHTML = "<strong>" + jogos(n) + "</strong>" + (ti.d ? " · " + esc(ti.d) : "");
+    var od = $("l-ordem");
+    if (natural(c)) { od.hidden = true; od.innerHTML = ""; return; }
+    od.hidden = false;
+    var ho = '<span class="rot">Ordem:</span>' + ORDENS.map(function (x) { return '<button type="button" data-l-ordem="' + x[0] + '" aria-pressed="' + (x[0] === ordem) + '">' + x[1] + "</button>"; }).join("");
+    if (od.innerHTML !== ho) od.innerHTML = ho;
+  }
+  function pintarMais() {
+    var resta = colArr.length - colN;
+    elMais.hidden = resta <= 0;
+    if (resta > 0) elMais.textContent = "Mostrar mais " + Math.min(resta, PASSO) + " (" + mil(resta) + " restantes)";
+  }
+  function maisCol() {
+    if (colN >= colArr.length) return;
+    var t0 = performance.now(), m = Math.min(colArr.length, colN + PASSO);
+    elGrade.insertAdjacentHTML("beforeend", colArr.slice(colN, m).map(vitCard).join(""));
+    colN = m;
+    pintarMais();
+    T.mais = Math.round(performance.now() - t0);
+  }
+  if ("IntersectionObserver" in window) {
+    ioMais = new IntersectionObserver(function (es) {
+      if (es.some(function (e) { return e.isIntersecting; }) && vista.c !== "home" && modoCat()) {
+        maisCol();
+        // continua perto do fim (tela grande): olha de novo
+        setTimeout(function () { if (!elMais.hidden) { ioMais.unobserve(elMais); ioMais.observe(elMais); } }, 120);
+      }
+    }, {rootMargin: "1200px 0px"});
+    ioMais.observe(elMais);
+  }
+
+  // ---------- mostrar uma vista ----------
+  function mostrar(c, opc) {
+    opc = opc || {};
+    vista.c = c;
+    var home = c === "home";
+    if (!home && !elHome.hidden) guardarX();
+    pintarAtivos();   // antes de rolar: a fileira de chips muda a altura do alto da tela
+    raiz.classList.toggle("l-em-col", !home);
+    elHome.hidden = !home; elCol.hidden = home;
+    btnVoltar.hidden = home;
+    if (home) {
+      renderHome(opc.forcar, opc.y || 0);
+    } else {
+      renderCol(c, {n: opc.n, forcar: opc.forcar || true});
+      window.scrollTo(0, opc.y || 0);
+    }
+    pintarAtivos();
+    if (elBusca.value !== (state.q || "")) elBusca.value = state.q || "";
+  }
+  // redesenho pedido pelo renderList (filtro, marcação, catálogo que chegou...)
+  var agendado = 0;
+  function agendar() {
+    if (agendado) return;
+    agendado = requestAnimationFrame(function () { agendado = 0; atualizar(); });
+  }
+  function atualizar() {
+    if (!modoCat() || folhaAberta()) { pintarAtivos(); return; }
+    // o gênero da entrada do histórico acompanha o que está ligado
+    try { var s = history.state; if (s && s.lv && s.g !== state.genre) history.replaceState(Object.assign({}, s, {g: state.genre}), ""); } catch (e) {}
+    var q = (state.q || "").trim();
+    if (q && vista.c !== "busca") { entrarBusca(); return; }
+    if (vista.c === "home") renderHome(false);
+    else {
+      var antes = colF, y0 = window.scrollY, topoGrade = elCol.getBoundingClientRect().top + window.scrollY;
+      renderCol(vista.c, {});
+      if (antes && colF !== antes && y0 > topoGrade) window.scrollTo(0, Math.max(0, topoGrade - 70));
+    }
+    pintarAtivos();
+  }
+
+  // ---------- history: cada catálogo é uma entrada (o voltar do celular volta) ----------
+  function entrada(c, x) { return Object.assign({lv: 1, c: c, g: state.genre}, x || {}); }
+  function guardarLugar() {
+    try {
+      var s = history.state;
+      if (s && s.lv) history.replaceState(Object.assign({}, s, {y: Math.round(window.scrollY), n: vista.c !== "home" ? colN : 0, g: s.c === vista.c ? state.genre : s.g}), "");
+    } catch (e) {}
+  }
+  var esperando = null;
+  // depois que o voltar (de uma ficha ou da folha) terminar, faz f
+  function aposVoltar(f) {
+    var feito = false;
+    var vai = function () { if (feito) return; feito = true; if (esperando === vai) esperando = null; f(); };
+    esperando = vai;
+    setTimeout(vai, 900);
+    return vai;
+  }
+  function abrir(chave, opc) {
+    opc = opc || {};
+    var t0 = performance.now();
+    var c = chave, g = state.genre;
+    if (chave.indexOf("gen:") === 0) { c = "todos"; g = chave.slice(4); }
+    if (!modoCat()) { modoLista(false); }
+    else guardarLugar();
+    if (opc.generoAntes !== undefined) { try { history.replaceState(Object.assign({}, history.state, {g: opc.generoAntes}), ""); } catch (e) {} }
+    var mudouG = g !== state.genre;
+    if (mudouG) por("genre", g);
+    // o catálogo abre já com a busca limpa (a busca tem a vista dela)
+    if (c !== "busca" && (state.q || "").trim()) limparBusca();
+    try { history.pushState(entrada(c), ""); } catch (e) {}
+    mostrar(c, {forcar: true});
+    if (mudouG) renderList();
+    T.abrir = Math.round(performance.now() - t0);
+    T.abrirQual = chave;
+    try { $("l-col-tit").focus({preventScroll: true}); } catch (e) {}
+  }
+  function aplicar(s) {
+    var t0 = performance.now();
+    try { aplicar0(s); } finally { T.voltar = Math.round(performance.now() - t0); }
+  }
+  function aplicar0(s) {
+    if (s.c === "lista") { if (modoCat()) modoLista(true); return; }
+    if (!modoCat()) modoLista(false, true);
+    var mudou = false;
+    if (s.g && s.g !== state.genre) { por("genre", s.g); mudou = true; }
+    if (s.c !== "busca" && (state.q || "").trim()) { limparBusca(); mudou = true; }
+    if (s.c === "busca" && !(state.q || "").trim()) { s = Object.assign({}, s, {c: "home"}); }
+    if (s.c === vista.c && !mudou) { pintarAtivos(); return; }
+    mostrar(s.c, {y: s.y, n: s.n, forcar: s.c !== "home"});
+    if (mudou) renderList();
+  }
+  window.addEventListener("popstate", function () {
+    var s = history.state;
+    if (folhaAberta() && !(s && s.lFolha)) { fecharFolha(true); return; }
+    if (esperando) { var f = esperando; f(); return; }
+    if (!s || !s.lv) return;   // a entrada de outro módulo (ficha, Avaliar...): ele cuida
+    aplicar(s);
+  });
+
+  // ---------- abas ----------
+  var sujoLista = true;
+  function modoLista(on, semHist) {
+    if (on === !modoCat()) return;
+    if (on) {
+      guardarLugar();
+      H.classList.add("l-lista");
+      if (!semHist) { try { history.replaceState(entrada("lista"), ""); } catch (e) {} }
+      raiz.querySelectorAll("[data-l-aba]").forEach(function (b) { b.setAttribute("aria-selected", String(b.dataset.lAba === "lista")); });
+      var t0 = performance.now();
+      if (sujoLista) renderList();
+      T.lista = Math.round(performance.now() - t0);
+      window.scrollTo(0, 0);
+    } else {
+      H.classList.remove("l-lista");
+      raiz.querySelectorAll("[data-l-aba]").forEach(function (b) { b.setAttribute("aria-selected", String(b.dataset.lAba === "cat")); });
+    }
+  }
+
+  // ---------- busca ----------
+  var bOrig = $("busca");
+  function limparBusca() {
+    state.q = "";
+    if (bOrig) { bOrig.value = ""; bOrig.dispatchEvent(new Event("input", {bubbles: true})); }
+    elBusca.value = "";
+  }
+  function entrarBusca() {
+    guardarLugar();
+    try { history.pushState(entrada("busca"), ""); } catch (e) {}
+    mostrar("busca", {forcar: true});
+  }
+  elBusca.addEventListener("input", function () {
+    var t0 = performance.now();
+    if (bOrig) { bOrig.value = elBusca.value; bOrig.dispatchEvent(new Event("input", {bubbles: true})); }
+    else { state.q = elBusca.value; renderList(); }
+    if (!elBusca.value.trim() && vista.c === "busca") { try { history.back(); } catch (e) {} }
+    T.buscaTecla = Math.round(performance.now() - t0);
+  });
+  elBusca.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); elBusca.blur(); } });
+  if (bOrig) bOrig.addEventListener("input", function () { if (elBusca.value !== bOrig.value) elBusca.value = bOrig.value; });
+
+  // ---------- renderList: com o catálogo na tela, a lista antiga espera ----------
+  var renderAntL = renderList;
+  renderList = function () {
+    if (modoCat() || folhaAberta()) { sujoLista = true; agendar(); return; }
+    sujoLista = false;
+    var r = renderAntL.apply(this, arguments);
+    pintarAtivos();
+    return r;
+  };
+  // marcações (estrela, instalar...): só a prateleira "Seus interesses" e a contagem acompanham, sem redesenhar a tela
+  var favAntes = state.fav.size;
+  if (typeof save === "function") {
+    var saveAntL = save;
+    save = function () {
+      var r = saveAntL.apply(this, arguments);
+      if (state.fav.size !== favAntes) {
+        favAntes = state.fav.size;
+        setTimeout(function () {
+          if (!modoCat() || vista.c !== "home") return;
+          var s = elPrats.querySelector('[data-prat="fav"]');
+          if (s && s.dataset.n) { var tr = s.querySelector(".vit-trilho"), x = tr ? tr.scrollLeft : 0; cb.col = {}; pintarPrat(s, {x: x, n: Number(s.dataset.n)}); }
+        }, 0);
+      }
+      return r;
+    };
+  }
+
+  // ---------- setas da ficha (mod_B2): andam pela tela atual ----------
+  var ultPrat = null;
+  window.L_IDS = function () {
+    if (!modoCat()) return null;
+    var l = vista.c === "home" ? (ultPrat ? itens(ultPrat) : null) : colArr;
+    return l ? l.map(function (g) { return g.id; }) : null;
+  };
+  document.addEventListener("click", function (e) {
+    var v = e.target.closest ? e.target.closest("#l-raiz [data-ver]") : null;
+    if (!v) return;
+    var s = v.closest(".l-prat");
+    ultPrat = s ? s.dataset.prat : null;
+  }, true);
+
+  // ---------- gênero na ficha: abre o catálogo do gênero ----------
+  var abrirAntL = abrirFicha, ultVisto = null;
+  abrirFicha = function (id) {
+    var r = abrirAntL.apply(this, arguments);
+    try {
+      var g = porId[id], fi = $("ficha"), sp = fi && fi.querySelector(".ficha-titulo .gen");
+      if (g && sp && GENRES[g.gn]) {
+        sp.classList.add("l-gen"); sp.dataset.lGen = g.gn;
+        sp.setAttribute("role", "link"); sp.setAttribute("tabindex", "0");
+        sp.setAttribute("aria-label", "Ver todos os jogos de " + GENRES[g.gn].label);
+      }
+      if (fi && fi.open) ultVisto = id;
+    } catch (e) {}
+    return r;
+  };
+  function irAoGenero(gn) {
+    var fi = $("ficha");
+    // outros diálogos (Para você, Histórico...) fecham junto
+    document.querySelectorAll("dialog[open]").forEach(function (d) { if (d !== fi && d.id !== "l-folha") try { d.close(); } catch (e) {} });
+    if (fi && fi.open) {
+      var pushed = history.state && history.state.ficha;
+      if (pushed) aposVoltar(function () { abrir("gen:" + gn); });
+      fi.close();
+      if (!pushed) abrir("gen:" + gn);
+    } else abrir("gen:" + gn);
+  }
+  document.addEventListener("click", function (e) {
+    var sp = e.target.closest ? e.target.closest("#ficha .l-gen[data-l-gen]") : null;
+    if (sp) { e.preventDefault(); irAoGenero(sp.dataset.lGen); }
+  });
+  document.addEventListener("keydown", function (e) {
+    if ((e.key === "Enter" || e.key === " ") && e.target && e.target.matches && e.target.matches("#ficha .l-gen[data-l-gen]")) { e.preventDefault(); irAoGenero(e.target.dataset.lGen); }
+  });
+  // fechou a ficha depois de andar pelas setas: a grade vai até o último jogo visto
+  var fichaEl = $("ficha");
+  if (fichaEl) fichaEl.addEventListener("close", function () {
+    var id = ultVisto; ultVisto = null;
+    if (!id || !modoCat() || vista.c === "home") return;
+    setTimeout(function () {
+      var i = -1;
+      for (var k = 0; k < colArr.length; k++) if (colArr[k].id === id) { i = k; break; }
+      if (i < 0) return;
+      while (colN <= i && colN < colArr.length) maisCol();
+      var el = elGrade.querySelector('[data-previa="' + id + '"]');
+      if (!el) return;
+      var r = el.getBoundingClientRect(), topo = $("l-barra").getBoundingClientRect().bottom;
+      if (r.top >= topo && r.bottom <= innerHeight - 60) return;
+      window.scrollBy(0, r.top - topo - 20);
+    }, 30);
+  });
+  // etiqueta tocada na ficha (mod_Q): com o catálogo, mostra os jogos dela em grade
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest ? e.target.closest("[data-etq-ficha]") : null;
+    if (!b || !modoCat()) return;
+    var ir = function () { if (vista.c === "home") abrir("todos"); else { window.scrollTo(0, 0); agendar(); } };
+    if (history.state && history.state.ficha) aposVoltar(ir); else setTimeout(ir, 0);
+  });
+  // gênero no menu preso da lista antiga, no seletor antigo e o "Ver só as joias" da fileira antiga: viram catálogo
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest) return;
+    var p = e.target.closest('#pular [data-pular^="sec-gen-"]');
+    if (p) { e.preventDefault(); e.stopPropagation(); abrir("gen:" + p.dataset.pular.slice(8)); return; }
+    var j = e.target.closest("[data-j-sojoias]");
+    if (j) { e.preventDefault(); e.stopPropagation(); abrir("joias"); return; }
+    var f = e.target.closest("#btn-filtros");
+    if (f) { e.preventDefault(); e.stopPropagation(); abrirFolha(); }
+  }, true);
+  (function () {
+    var sel = $("genero");
+    if (!sel) return;
+    sel.addEventListener("change", function () { if (sel.value !== "all") abrir("gen:" + sel.value); });
+  })();
+
+  // ---------- cliques na tela ----------
+  raiz.addEventListener("click", function (e) {
+    var t = e.target.closest ? e.target.closest("button") : null;
+    if (!t) return;
+    if (t.dataset.lAbrir) { abrir(t.dataset.lAbrir); return; }
+    if (t.dataset.lAba) {
+      if (t.dataset.lAba === "lista") modoLista(true);
+      else { modoLista(false); try { history.replaceState(entrada("home"), ""); } catch (er) {} mostrar("home", {forcar: true}); }
+      return;
+    }
+    if (t.hasAttribute("data-l-voltar")) { try { history.back(); } catch (er) {} return; }
+    if (t.hasAttribute("data-l-filtros")) { abrirFolha(); return; }
+    if (t.dataset.lAtalho) { var o = $(t.dataset.lAtalho); if (o) o.click(); return; }
+    if (t.dataset.lOrdem) {
+      ordem = t.dataset.lOrdem; gravar(KO, ordem);
+      var t0 = performance.now();
+      renderCol(vista.c, {forcar: true, n: PASSO});
+      var topo = elCol.getBoundingClientRect().top + window.scrollY;
+      if (window.scrollY > topo) window.scrollTo(0, Math.max(0, topo - 70));
+      T.ordem = Math.round(performance.now() - t0);
+      return;
+    }
+    if (t.hasAttribute("data-l-mais")) { maisCol(); return; }
+  });
+  document.addEventListener("click", function (e) {
+    var t = e.target.closest ? e.target.closest("[data-l-tira], [data-l-limpar]") : null;
+    if (!t || !(raiz.contains(t) || elAtivos2.contains(t))) return;
+    if (t.hasAttribute("data-l-limpar")) { limparTudo(); return; }
+    var a = ativosAtual[Number(t.dataset.lTira)];
+    if (a) { a.tira(); renderList(); }
+  });
+
+  // =====================================================================
+  // FOLHA DE FILTROS
+  // =====================================================================
+  folha = document.createElement("dialog");
+  folha.id = "l-folha";
+  folha.setAttribute("aria-labelledby", "l-folha-tit");
+  folha.innerHTML = '<div class="l-f-in"><div class="l-f-cab"><h2 id="l-folha-tit">Filtros</h2><button type="button" class="l-f-x" data-l-ffechar aria-label="Fechar">✕</button></div>' +
+    '<div class="l-f-corpo" id="l-f-corpo"></div>' +
+    '<div class="l-f-pe"><button type="button" class="l-f-limpar" data-l-flimpar>Limpar tudo</button><button type="button" class="l-f-ok" data-l-fok id="l-f-ok">Mostrar</button></div></div>';
+  document.body.appendChild(folha);
+  var corpo = $("l-f-corpo");
+  var SEC = [
+    {id: "pt", t: "Português", ops: [["all", "Tanto faz"], ["qq", "Em português (oficial, de fã ou sua)"], ["leg", "PT-BR oficial"], ["fa", "Tradução pronta (de fã)"], ["dub", "🎙 Dublado"], ["sem", "Sem português"]],
+      v: function () { return chipBOn("pt") ? "qq" : state.idioma; },
+      por: function (v) { chipBPor("pt", v === "qq"); por("idioma", v === "qq" ? "all" : v); }},
+    {id: "rom", t: "Romance", ops: [["all", "Tanto faz"], ["com", "♥ Com romance"], ["sim", "♥ Romance central"], ["algum", "♡ Qualquer romance, até de fundo"], ["nao", "Sem romance"]],
+      v: function () { return state.rom !== "all" ? state.rom : chipBOn("rom") ? "com" : "all"; },
+      por: function (v) { chipBPor("rom", false); por("rom", v); }},
+    {id: "gen", t: "Gênero"},
+    {id: "etq", t: "Etiquetas", dica: "o jogo precisa ter todas as que você escolher"},
+    {id: "tam", t: "Tamanho", ops: [["all", "Tanto faz"], ["p", "Até 2 GB"], ["m", "2 a 5 GB"], ["g", "5 a 10 GB"], ["gg", "10 a 20 GB"], ["xg", "Mais de 20 GB"], ["cabe", "Cabe no que sobra do cartão"]],
+      v: function () { return state.size; }, por: function (v) { por("size", v); }},
+    {id: "dur", t: "Duração", dica: "história principal", ops: [["all", "Tanto faz"], ["5", "Até 5 h"], ["10", "Até 10 h"], ["20", "Até 20 h"], ["40", "Até 40 h"], ["mais", "Mais de 40 h"]],
+      v: function () { return state.dur !== "all" ? state.dur : chipBOn("curto") ? "30" : "all"; },
+      por: function (v) { chipBPor("curto", false); por("dur", v); }},
+    {id: "nota", t: "Nota dos jogadores", ops: [["0", "Tanto faz"], ["70", "70 ou mais"], ["80", "80 ou mais"], ["90", "90 ou mais"]],
+      v: function () { return String(state.lNota || (chipBOn("nota") ? 80 : 0)); },
+      por: function (v) { chipBPor("nota", false); por("lNota", Number(v)); }},
+    {id: "meus", t: "Só os meus", multi: true}
+  ];
+  var MEUS = [
+    ["fav", "★ Com estrela", function () { return state.onlyFav || chipBOn("fav"); }, function (on) { chipBPor("fav", false); por("onlyFav", on); }],
+    ["sel", "✓ Marcados pra instalar", function () { return state.onlyMarked; }, function (on) { por("onlyMarked", on); }],
+    ["w", "▶ Quero jogar", function () { return state.plano === "w"; }, function (on) { por("plano", on ? "w" : "all"); }],
+    ["novo", "✨ Novos na lista", function () { return state.onlyNew; }, function (on) { por("onlyNew", on); }],
+    ["joia", "💎 Só joias escondidas", function () { return !!state.soJoia; }, function (on) { por("soJoia", on); }]
+  ];
+  function pill(sec, v, rot, on, n) {
+    return '<button type="button" data-l-op="' + sec + '" data-v="' + esc(v) + '" aria-pressed="' + (on ? "true" : "false") + '"' + (n === 0 && !on ? ' class="zero"' : "") + ">" + rot +
+      (n !== undefined && n !== null ? ' <span class="n">' + mil(n) + "</span>" : "") + "</button>";
+  }
+  function colFolha() { return vista.c === "home" || !modoCat() ? "todos" : vista.c; }
+  function pintarFolha() {
+    var t0 = performance.now(), b = base(), c = colFolha();
+    // contagem por gênero: com os outros filtros (sem o de gênero)
+    var cg = {};
+    b.semGen.forEach(function (g) { cg[g.gn] = (cg[g.gn] || 0) + 1; });
+    var ce = {};
+    b.lista.forEach(function (g) { if (g.et) { var p = g.et.split(" "); for (var i = 0; i < p.length; i++) ce[p[i]] = (ce[p[i]] || 0) + 1; } });
+    var DEF = window.ETIQ || (typeof ETIQ !== "undefined" ? ETIQ : {}), GR = typeof ETIQ_GRUPOS !== "undefined" ? ETIQ_GRUPOS : {};
+    var etq = etqSel();
+    var h = SEC.map(function (s) {
+      var corpoS = "";
+      if (s.id === "gen") {
+        corpoS = pill("gen", "all", "Todos", state.genre === "all", b.semGen.length) +
+          GEN_ORDER.map(function (k) { return GENRES[k] ? pill("gen", k, GENRES[k].label, state.genre === k, cg[k] || 0) : ""; }).join("");
+        corpoS = '<div class="l-pills">' + corpoS + "</div>";
+      } else if (s.id === "etq") {
+        var ult = null, grupos = "";
+        Object.keys(DEF).forEach(function (cod) {
+          var gr = DEF[cod].grupo;
+          if (gr !== ult) { if (ult !== null) grupos += "</div>"; grupos += "<h4>" + esc(GR[gr] || gr) + '</h4><div class="l-pills">'; ult = gr; }
+          grupos += pill("etq", cod, esc(DEF[cod].label), etq.indexOf(cod) >= 0, ce[cod] || 0);
+        });
+        corpoS = grupos + (ult !== null ? "</div>" : "");
+        if (!corpoS) return "";
+      } else if (s.multi) {
+        corpoS = '<div class="l-pills">' + MEUS.filter(function (m) { return m[0] !== "novo" || (typeof NOVO !== "undefined" && NOVO); })
+          .map(function (m) { return pill("meus", m[0], m[1], m[2]()); }).join("") + "</div>";
+      } else {
+        var v = s.v(), ops = s.ops.slice();
+        if (!ops.some(function (o) { return o[0] === v; })) ops.push([v, s.id === "dur" && v === "30" ? "Até 30 h" : txtOpcao(s.id === "tam" ? "tamanho" : s.id === "dur" ? "duracao" : "idioma", v)]);
+        corpoS = '<div class="l-pills">' + ops.map(function (o) { return pill(s.id, o[0], o[1], o[0] === v); }).join("") + "</div>";
+      }
+      return '<section class="l-f-sec"><h3>' + s.t + (s.dica ? " <small>(" + s.dica + ")</small>" : "") + "</h3>" + corpoS + "</section>";
+    }).join("");
+    var y = corpo.scrollTop;
+    corpo.innerHTML = h;
+    corpo.scrollTop = y;
+    var n = contar(c);
+    var ok = $("l-f-ok");
+    ok.textContent = n ? "Mostrar " + jogos(n) : "Nenhum jogo: tire algum filtro";
+    ok.disabled = false;
+    T.folha = Math.round(performance.now() - t0);
+  }
+  var folhaEmpurrou = false, generoAntes = "all";
+  function abrirFolha() {
+    if (folhaAberta()) return;
+    var t0 = performance.now();
+    generoAntes = state.genre;
+    pintarFolha();
+    folha.showModal();
+    corpo.scrollTop = 0;
+    try { history.pushState({lFolha: 1}, ""); folhaEmpurrou = true; } catch (e) { folhaEmpurrou = false; }
+    try { folha.querySelector("[data-l-ffechar]").focus({preventScroll: true}); } catch (e) {}
+    T.abrirFolha = Math.round(performance.now() - t0);
+  }
+  function fecharFolha(peloVoltar, depois) {
+    if (!folhaAberta()) { if (depois) depois(); return; }
+    folha.close();
+    var fim = function () {
+      if (!modoCat()) { if (sujoLista) renderList(); }
+      else atualizar();
+      if (depois) depois();
+    };
+    if (folhaEmpurrou && !peloVoltar) {
+      folhaEmpurrou = false;
+      if (history.state && history.state.lFolha) { aposVoltar(fim); try { history.back(); } catch (e) {} return; }
+    }
+    folhaEmpurrou = false;
+    fim();
+  }
+  folha.addEventListener("cancel", function (e) { e.preventDefault(); fecharFolha(false); });
+  folha.addEventListener("click", function (e) {
+    if (e.target === folha) { fecharFolha(false); return; }
+    var b = e.target.closest ? e.target.closest("button") : null;
+    if (!b) return;
+    if (b.hasAttribute("data-l-ffechar")) { fecharFolha(false); return; }
+    if (b.hasAttribute("data-l-flimpar")) {
+      var gen = vista.c === "todos" && modoCat() ? state.genre : "all", q = state.q;
+      limparFiltros();
+      if (gen !== "all") por("genre", gen);
+      if (q) { state.q = q; if (bOrig) bOrig.value = q; }
+      pintarFolha();
+      return;
+    }
+    if (b.hasAttribute("data-l-fok")) {
+      var naHome = modoCat() && vista.c === "home";
+      var ga = generoAntes;
+      fecharFolha(false, function () {
+        if (naHome && (temFiltro() || state.genre !== "all")) abrir("todos", {generoAntes: ga});
+        else if (modoCat() && vista.c !== "home") window.scrollTo(0, 0);
+        else if (!modoCat()) { var l = $("lista-jogos"); if (l) l.scrollIntoView({block: "start"}); }
+      });
+      return;
+    }
+    var op = b.dataset.lOp;
+    if (!op) return;
+    var v = b.dataset.v, t0 = performance.now();
+    if (op === "gen") por("genre", state.genre === v ? "all" : v);
+    else if (op === "etq") etqPor(v, b.getAttribute("aria-pressed") !== "true");
+    else if (op === "meus") { var m = MEUS.filter(function (x) { return x[0] === v; })[0]; if (m) m[3](!m[2]()); }
+    else {
+      var s = SEC.filter(function (x) { return x.id === op; })[0];
+      if (s) s.por(b.getAttribute("aria-pressed") === "true" && v !== "all" && v !== "0" ? (op === "nota" ? "0" : "all") : v);
+    }
+    renderList();   // (a tela de trás só é refeita ao fechar)
+    pintarFolha();
+    T.filtroToque = Math.round(performance.now() - t0);
+  });
+
+  // ---------- começo ----------
+  function iniciar() {
+    var t0 = performance.now();
+    var s = history.state;
+    if (s && s.lv && s.c && s.c !== "lista" && s.c !== "home") {
+      // recarregou com um catálogo aberto: volta nele
+      aplicar(s);
+      if (vista.c === "home") mostrar("home", {forcar: true});
+    } else {
+      try { history.replaceState(Object.assign(entrada("home"), {g: "all", y: 0}), ""); } catch (e) {}
+      if ((state.q || "").trim()) { mostrar("home", {forcar: true}); entrarBusca(); }
+      else if (state.genre !== "all" && GENRES[state.genre]) { var g = state.genre; mostrar("home", {forcar: true}); abrir("gen:" + g, {generoAntes: "all"}); }
+      else mostrar("home", {forcar: true});
+    }
+    T.inicio = Math.round(performance.now() - t0);
+  }
+  try {
+    iniciar();
+  } catch (e) {
+    // sem o catálogo, a lista antiga volta inteira
+    H.classList.remove("l-on");
+    raiz.hidden = true;
+    window.L_ERRO = String(e && e.stack || e);
+    try { renderList = renderAntL; renderList(); } catch (er) {}
+  }
+  // o catálogo inteiro chegou (pacotes): as prateleiras se completam
+  document.addEventListener("estante-catalogo", function () { cb.k = null; agendar(); });
+
+  window.L_nav = {
+    abrir: abrir,
+    vista: function () { return vista.c; },
+    tempos: T,
+    folha: abrirFolha,
+    ativos: function () { return ativos().map(function (a) { return a.rot; }); },
+    contar: function (c) { return contar(c || "todos"); }
+  };
 })();
 

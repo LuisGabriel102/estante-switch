@@ -1957,6 +1957,16 @@ if (ficha) {
   ficha.addEventListener("close", function () { ficha.innerHTML = ""; fotos = []; });
 }
 
+// agL: o app abre no catálogo; a rolagem guardada da lista antiga não é reaplicada na abertura
+(function () {
+  try {
+    ["-sessao", "-A-pos"].forEach(function (k) {
+      var s = JSON.parse(localStorage.getItem(KEY + k) || "null");
+      if (s && typeof s === "object" && (s.y || s.g)) { s.y = 0; delete s.g; delete s.gd; localStorage.setItem(KEY + k, JSON.stringify(s)); }
+    });
+    localStorage.removeItem(KEY + "-G-ancora");
+  } catch (e) {}
+})();
 load();
 refazOrdemNome();
 (function () {

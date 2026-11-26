@@ -23,6 +23,7 @@
 
   // vizinhos na lista visível
   function ids() {
+    if (window.L_IDS) { var lx = window.L_IDS(); if (lx) return lx; }   // agL: catálogo na tela
     var vistos = {}, r = [];
     document.querySelectorAll("#lista-jogos [data-card]").forEach(function (el) {
       var id = el.getAttribute("data-card");
